@@ -1,0 +1,223 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --primary: #1a237e;
+    --primary-light: #3949ab;
+    --primary-dark: #0d1642;
+    --accent: #ff6f00;
+    --accent-light: #ffa040;
+    --success: #2e7d32;
+    --danger: #c62828;
+    --bg: #f5f7fa;
+    --card: #ffffff;
+    --text: #1a1a2e;
+    --text-light: #6b7280;
+    --border: #e2e8f0;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+  padding: 0;
+}
+
+/* Print styles for A4 — removes browser URL, title, date, timestamps */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+  
+  html {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide everything that should not print */
+  .no-print,
+  header,
+  aside,
+  nav,
+  footer {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+  
+  /* Remove all shadows, borders, backgrounds from exam paper wrapper */
+  .exam-paper {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: white !important;
+  }
+
+  /* Clean two-column layout for objectives */
+  .two-column-layout {
+    column-count: 2 !important;
+    column-gap: 20px !important;
+    column-rule: 1px solid #000 !important;
+  }
+
+  .answer-lines {
+    border-bottom: 1px solid #333;
+    min-height: 25px;
+    margin: 4px 0;
+  }
+
+  /* Hide the main layout wrapper padding */
+  main {
+    padding: 0 !important;
+  }
+  main > div {
+    padding: 0 !important;
+  }
+
+  /* Ensure page breaks work */
+  .page-break-before {
+    page-break-before: always;
+  }
+}
+
+.print-only {
+  display: none;
+}
+
+/* Exam Paper Styles */
+.exam-paper {
+  width: 210mm;
+  min-height: 297mm;
+  background: white;
+  padding: 15mm;
+  margin: 0 auto;
+  box-shadow: 0 0 15px rgba(0,0,0,0.1);
+  position: relative;
+}
+
+.two-column-layout {
+  column-count: 2;
+  column-gap: 20px;
+  column-rule: 1px solid #999;
+}
+
+.two-column-layout > * {
+  break-inside: avoid;
+}
+
+.no-column {
+  column-count: 1 !important;
+  column-rule: none !important;
+}
+
+.answer-line {
+  border-bottom: 1px solid #333;
+  min-height: 28px;
+  margin: 5px 0;
+  width: 100%;
+}
+
+/* OMR Sheet Styles */
+.omr-bubble {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid #333;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 4px;
+  font-size: 10px;
+}
+
+/* BECE Shading Style (Box Form) */
+.omr-box {
+  width: 32px;
+  height: 18px;
+  border: 1.5px solid #000;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 3px;
+  font-size: 11px;
+  font-weight: bold;
+  font-family: monospace;
+  background: white;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--primary-light);
+  border-radius: 3px;
+}
+
+/* Mobile responsive exam paper */
+@media (max-width: 768px) {
+  .exam-paper {
+    width: 100%;
+    min-height: auto;
+    padding: 16px;
+    box-shadow: none;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+  }
+  
+  .two-column-layout {
+    column-count: 1;
+    column-rule: none;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Gradient backgrounds */
+.gradient-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+}
