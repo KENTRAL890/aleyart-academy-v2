@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { User, ClassLevel, Subject, ExamType, ExamPaper, DifficultyLevel } from '../types';
 import { CLASS_LEVELS, SUBJECTS_BY_LEVEL, EXAM_TYPES, SPECIAL_EXAM_TYPES, TOPICS_BY_SUBJECT_LEVEL, EARLY_CHILDHOOD_LEVELS, BEACON_OF_LIGHT_EXCERPTS, MATH_SHAPE_OPTIONS, getTopicsForTerm, NACCA_DIAGRAMS } from '../data/constants';
 import { generateExamPaper } from '../data/questionGenerator';
@@ -80,6 +80,18 @@ export default function ExamGenerator({ user, specialMode }: Props) {
   const objectiveTotalMarks = objectiveCount * objectiveMarksPerQ;
   const subjectiveTotalMarks = subjectiveSections.reduce((sum, s) => sum + s.totalMarks, 0);
   const grandTotal = objectiveTotalMarks + subjectiveTotalMarks;
+
+  // Auto-set NaCCA/level-based recommended objective question counts
+  useEffect(() => {
+    if (!classLevel) return;
+    if (['Basic 1', 'Basic 2', 'Basic 3'].includes(classLevel)) {
+      setObjectiveCount(30);
+    } else if (['Basic 4', 'Basic 5', 'Basic 6'].includes(classLevel)) {
+      setObjectiveCount(30);
+    } else if (['Basic 7', 'Basic 8', 'Basic 9'].includes(classLevel)) {
+      setObjectiveCount(40);
+    }
+  }, [classLevel]);
 
   const getExamTypes = (): ExamType[] => {
     if (classLevel) {
@@ -438,6 +450,73 @@ export default function ExamGenerator({ user, specialMode }: Props) {
               </div>
             </div>
 
+            {/* Document Upload — Paste or Upload Questions from Word/Text */}
+            <div className="bg-orange-50 rounded-xl p-5 border border-orange-200">
+              <h4 className="font-semibold text-orange-800 mb-3 flex items-center gap-2">
+                <span>📄</span> Upload / Paste Questions from Document (Word, Text)
+              </h4>
+              <p className="text-xs text-orange-600 mb-3">Paste questions from a Word document or upload a .txt file. Format: one question per line. For MCQ, add options separated by | (pipe). Example:<br/><code className="bg-orange-100 px-1 rounded text-[10px]">What is 2+2? | 3 | 4 | 5 | 6 | 4</code> (last value = correct answer)</p>
+              <div className="space-y-2">
+                <textarea
+                  placeholder={"Paste questions here...\nExample objective:\nWhat is the capital of Ghana? | Kumasi | Accra | Tamale | Cape Coast | Accra\n\nExample subjective:\nExplain the importance of education in Ghana."}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-orange-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  onBlur={e => {
+                    const text = e.target.value.trim();
+                    if (!text) return;
+                    const lines = text.split('\n').filter(l => l.trim());
+                    for (const line of lines) {
+                      const parts = line.split('|').map(p => p.trim());
+                      if (parts.length >= 6) {
+                        // MCQ: question | opt1 | opt2 | opt3 | opt4 | correct
+                        const q = parts[0];
+                        const opts = parts.slice(1, 5);
+                        const ans = parts[5] || opts[0];
+                        setCustomObjectives(prev => [...prev, { question: q, options: opts, correctAnswer: ans }]);
+                      } else if (parts.length >= 2) {
+                        // Subjective: question | answer
+                        setCustomSubjectives(prev => [...prev, { question: parts[0], answer: parts[1] || 'Accept valid answer.', marks: 10 }]);
+                      }
+                    }
+                    e.target.value = '';
+                  }}
+                />
+                <div className="flex items-center gap-2">
+                  <label className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition">
+                    📁 Upload .txt File
+                    <input
+                      type="file"
+                      accept=".txt,.text"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          const text = (ev.target?.result as string || '').trim();
+                          const lines = text.split('\n').filter(l => l.trim());
+                          for (const line of lines) {
+                            const parts = line.split('|').map(p => p.trim());
+                            if (parts.length >= 6) {
+                              const q = parts[0];
+                              const opts = parts.slice(1, 5);
+                              const ans = parts[5] || opts[0];
+                              setCustomObjectives(prev => [...prev, { question: q, options: opts, correctAnswer: ans }]);
+                            } else if (parts.length >= 2) {
+                              setCustomSubjectives(prev => [...prev, { question: parts[0], answer: parts[1] || 'Accept valid answer.', marks: 10 }]);
+                            }
+                          }
+                        };
+                        reader.readAsText(file);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                  <span className="text-[10px] text-orange-500">{customObjectives.length + customSubjectives.length} custom question(s) loaded</span>
+                </div>
+              </div>
+            </div>
+
             {/* Literature Selection for English Basic 7-9 */}
             {subject === 'English Language' && ['Basic 7', 'Basic 8', 'Basic 9'].includes(classLevel as string) && (
               <div className="bg-purple-50 rounded-xl p-5 border border-purple-200">
@@ -516,6 +595,9 @@ export default function ExamGenerator({ user, specialMode }: Props) {
             {/* Section A - Objective */}
             <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
               <h4 className="font-semibold text-blue-800 mb-3">📝 Section A - Objective Questions</h4>
+              <div className="bg-blue-100 border border-blue-200 rounded-lg p-3 mb-3 text-xs text-blue-800">
+                <strong>NaCCA Recommended Objective Count:</strong> Basic 1–3 = 30 questions, Basic 4–6 = 30 questions, Basic 7–9 = 40 questions.
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-2">Number of Questions</label>

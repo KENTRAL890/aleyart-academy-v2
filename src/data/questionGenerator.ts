@@ -96,20 +96,24 @@ const JHS: ClassLevel[] = ['Basic 7', 'Basic 8', 'Basic 9'];
 
 function isLevel(cl: ClassLevel, levels: ClassLevel[]): boolean { return levels.includes(cl); }
 
-// Generate dynamic NaCCA-aligned math questions appropriate to class level
-function generateMathVariations(classLevel: ClassLevel, topics: string[]): QItem[] {
+// Generate dynamic NaCCA-aligned math questions appropriate to class level AND difficulty
+function generateMathVariations(classLevel: ClassLevel, topics: string[], difficulty?: string): QItem[] {
   const v: QItem[] = [];
+  const diff = difficulty || 'Medium';
   const r = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
   const w = (ans: number, spread: number) => {
     const s = new Set<number>([ans]);
     while (s.size < 4) s.add(ans + r(-spread, spread) || ans + s.size);
     return shuffle(Array.from(s)).map(String);
   };
+  // Difficulty: Easy=small numbers, Medium=moderate, Hard=larger/complex
 
   if (isLevel(classLevel, LOWER_PRIMARY)) {
-    // Basic 1-3: simple arithmetic, counting, shapes NaCCA SBC
-    for (let i = 0; i < 8; i++) { const a = r(1, 20); const b = r(1, 20); v.push({ q: `${a} + ${b} = ___`, options: w(a+b, 5), answer: String(a+b), type: 'mc' }); }
-    for (let i = 0; i < 5; i++) { const a = r(10, 30); const b = r(1, a-1); v.push({ q: `${a} - ${b} = ___`, options: w(a-b, 4), answer: String(a-b), type: 'mc' }); }
+    // Basic 1-3: NaCCA SBC — difficulty scales number ranges
+    const maxAdd = diff === 'Easy' ? 10 : diff === 'Hard' ? 50 : 20;
+    const maxSub = diff === 'Easy' ? 15 : diff === 'Hard' ? 50 : 30;
+    for (let i = 0; i < 8; i++) { const a = r(1, maxAdd); const b = r(1, maxAdd); v.push({ q: `${a} + ${b} = ___`, options: w(a+b, 5), answer: String(a+b), type: 'mc' }); }
+    for (let i = 0; i < 5; i++) { const a = r(10, maxSub); const b = r(1, a-1); v.push({ q: `${a} - ${b} = ___`, options: w(a-b, 4), answer: String(a-b), type: 'mc' }); }
     if (topics.some(t => t.includes('Multipl'))) { for (let i = 0; i < 5; i++) { const a = r(2, 5); const b = r(2, 5); v.push({ q: `${a} × ${b} = ___`, options: w(a*b, 5), answer: String(a*b), type: 'mc' }); } }
     v.push({ q: 'How many sides does a rectangle have?', options: ['3', '4', '5', '6'], answer: '4', type: 'mc' });
     v.push({ q: 'Which shape has 3 sides?', options: ['Square', 'Triangle', 'Circle', 'Rectangle'], answer: 'Triangle', type: 'mc' });
@@ -119,8 +123,9 @@ function generateMathVariations(classLevel: ClassLevel, topics: string[]): QItem
   }
 
   if (isLevel(classLevel, UPPER_PRIMARY)) {
-    // Basic 4-6: fractions, decimals, geometry, data handling NaCCA SBC
-    for (let i = 0; i < 6; i++) { const a = r(10, 99); const b = r(10, 99); v.push({ q: `${a} × ${b} = ___`, options: w(a*b, 50), answer: String(a*b), type: 'mc' }); }
+    // Basic 4-6: NaCCA SBC — difficulty scales complexity
+    const mulMax = diff === 'Easy' ? 20 : diff === 'Hard' ? 99 : 50;
+    for (let i = 0; i < 6; i++) { const a = r(10, mulMax); const b = r(2, diff === 'Easy' ? 9 : mulMax); v.push({ q: `${a} × ${b} = ___`, options: w(a*b, Math.ceil(a*b*0.1)), answer: String(a*b), type: 'mc' }); }
     v.push({ q: 'What is 1/2 of 48?', options: ['20', '22', '24', '28'], answer: '24', type: 'mc' });
     v.push({ q: 'What is 3/4 of 60?', options: ['40', '45', '50', '55'], answer: '45', type: 'mc' });
     v.push({ q: 'Simplify 8/12 to its lowest term.', options: ['4/6', '2/3', '3/4', '1/2'], answer: '2/3', type: 'mc' });
@@ -130,11 +135,23 @@ function generateMathVariations(classLevel: ClassLevel, topics: string[]): QItem
     v.push({ q: 'Express the ratio 6:9 in its simplest form.', options: ['1:2', '2:3', '3:4', '6:9'], answer: '2:3', type: 'mc' });
     v.push({ q: 'If x + 7 = 15, find x.', options: ['6', '7', '8', '9'], answer: '8', type: 'mc' });
     v.push({ q: 'Arrange in ascending order: 0.5, 0.25, 0.75, 0.1', options: ['0.1, 0.25, 0.5, 0.75', '0.75, 0.5, 0.25, 0.1', '0.25, 0.1, 0.5, 0.75', '0.5, 0.1, 0.25, 0.75'], answer: '0.1, 0.25, 0.5, 0.75', type: 'mc' });
+
+    // ========== BASIC 4-6 GRAPHS & DATA HANDLING (NaCCA SBC) ==========
+    v.push({ q: 'A bar graph uses ___ to represent data.', options: ['Lines', 'Bars', 'Dots', 'Curves'], answer: 'Bars', type: 'mc' });
+    v.push({ q: 'A pictograph uses ___ to represent data.', options: ['Bars', 'Lines', 'Pictures or symbols', 'Angles'], answer: 'Pictures or symbols', type: 'mc' });
+    v.push({ q: 'The most common score in a data set is called the ___', options: ['Mean', 'Median', 'Mode', 'Range'], answer: 'Mode', type: 'mc' });
+    v.push({ q: 'Find the range of: 5, 12, 8, 3, 15.', options: ['8', '10', '12', '15'], answer: '12', type: 'mc' });
+    v.push({ q: 'In a bar graph, the bars should have ___ width.', options: ['Different', 'Equal', 'No', 'Increasing'], answer: 'Equal', type: 'mc' });
+    v.push({ q: 'The mean of 10, 20, 30, 40 is ___', options: ['20', '25', '30', '35'], answer: '25', type: 'mc' });
+    v.push({ q: 'The circumference of a circle with diameter 14cm is ___ (Take π = 22/7)', options: ['22cm', '44cm', '88cm', '154cm'], answer: '44cm', type: 'mc' });
+    v.push({ q: 'The area of a circle with radius 7cm is ___ (Take π = 22/7)', options: ['22cm²', '44cm²', '154cm²', '308cm²'], answer: '154cm²', type: 'mc' });
   }
 
   if (isLevel(classLevel, JHS)) {
-    // Basic 7-9: algebra, sets, trigonometry, statistics, graphs, pie chart, circumference NaCCA CCP
-    for (let i = 0; i < 4; i++) { const a = r(2, 8); const b = r(3, 15); const c = a*r(2,6)+b; v.push({ q: `Solve: ${a}x + ${b} = ${c}`, options: w((c-b)/a, 3), answer: String((c-b)/a), type: 'mc' }); }
+    // Basic 7-9: NaCCA CCP — difficulty scales equation complexity
+    const eqMax = diff === 'Easy' ? 5 : diff === 'Hard' ? 12 : 8;
+    const eqCoeff = diff === 'Easy' ? 4 : diff === 'Hard' ? 8 : 6;
+    for (let i = 0; i < 4; i++) { const a = r(2, eqMax); const b = r(3, 15); const c = a*r(2,eqCoeff)+b; v.push({ q: `Solve: ${a}x + ${b} = ${c}`, options: w((c-b)/a, 3), answer: String((c-b)/a), type: 'mc' }); }
     v.push({ q: 'If A = {1,2,3,4} and B = {3,4,5,6}, find A ∩ B.', options: ['{1,2}', '{3,4}', '{5,6}', '{1,2,3,4,5,6}'], answer: '{3,4}', type: 'mc' });
     v.push({ q: 'If A = {a,b,c,d,e}, find n(A).', options: ['3', '4', '5', '6'], answer: '5', type: 'mc' });
     v.push({ q: 'Find the median of 3, 7, 2, 9, 5.', options: ['3', '5', '7', '9'], answer: '5', type: 'mc' });
@@ -213,6 +230,11 @@ function generateLevelQuestions(subject: string, classLevel: ClassLevel, topics:
       v.push({ q: 'Soil that is good for farming is called ___ soil.', options: ['Sandy', 'Clay', 'Loamy', 'Gravel'], answer: 'Loamy', type: 'mc' });
       v.push({ q: 'The SI unit of force is ___', options: ['Joule', 'Newton', 'Watt', 'Pascal'], answer: 'Newton', type: 'mc' });
       v.push({ q: 'A circuit needs a ___ to be complete.', options: ['Switch', 'Magnet', 'Ruler', 'Pencil'], answer: 'Switch', type: 'mc' });
+      v.push({ q: 'The part of a plant that absorbs water from the soil is the ___', options: ['Leaf', 'Stem', 'Root', 'Flower'], answer: 'Root', type: 'mc' });
+      v.push({ q: 'A simple electric circuit consists of a cell, wire and ___', options: ['Magnet', 'Bulb', 'Ruler', 'Book'], answer: 'Bulb', type: 'mc' });
+      v.push({ q: 'The part of the human body that pumps blood is the ___', options: ['Liver', 'Kidney', 'Heart', 'Lung'], answer: 'Heart', type: 'mc' });
+      v.push({ q: 'In the water cycle, water vapour rises and forms ___', options: ['Rivers', 'Oceans', 'Clouds', 'Soil'], answer: 'Clouds', type: 'mc' });
+      v.push({ q: 'A lever is an example of a simple ___', options: ['Circuit', 'Machine', 'Mixture', 'Compound'], answer: 'Machine', type: 'mc' });
     }
     if (isJhs) {
       v.push({ q: 'Acids turn blue litmus paper ___', options: ['Blue', 'Green', 'Red', 'Yellow'], answer: 'Red', type: 'mc' });
@@ -249,6 +271,11 @@ function generateLevelQuestions(subject: string, classLevel: ClassLevel, topics:
       v.push({ q: 'Microsoft Word is used for ___', options: ['Drawing', 'Typing documents', 'Playing music', 'Browsing'], answer: 'Typing documents', type: 'mc' });
       v.push({ q: 'Which key do you press to make a capital letter?', options: ['Enter', 'Shift', 'Space', 'Tab'], answer: 'Shift', type: 'mc' });
       v.push({ q: 'A flowchart uses a ___ shape for decisions.', options: ['Rectangle', 'Oval', 'Diamond', 'Circle'], answer: 'Diamond', type: 'mc' });
+      v.push({ q: 'An oval shape in a flowchart represents ___', options: ['Process', 'Decision', 'Start/Stop', 'Input'], answer: 'Start/Stop', type: 'mc' });
+      v.push({ q: 'A spreadsheet is organized into rows and ___', options: ['Pages', 'Columns', 'Lines', 'Sheets'], answer: 'Columns', type: 'mc' });
+      v.push({ q: 'The Internet is a network of ___', options: ['Phones only', 'Computers worldwide', 'Schools only', 'Radios'], answer: 'Computers worldwide', type: 'mc' });
+      v.push({ q: 'Ctrl + S is used to ___ a document.', options: ['Print', 'Save', 'Delete', 'Open'], answer: 'Save', type: 'mc' });
+      v.push({ q: 'A computer program is a set of ___', options: ['Pictures', 'Instructions', 'Videos', 'Sounds'], answer: 'Instructions', type: 'mc' });
     }
     if (isJhs) {
       v.push({ q: 'HTML is used for creating ___', options: ['Spreadsheets', 'Databases', 'Web pages', 'Presentations'], answer: 'Web pages', type: 'mc' });
@@ -272,6 +299,16 @@ function generateLevelQuestions(subject: string, classLevel: ClassLevel, topics:
   if (subject === 'Creative Arts') {
     v.push({ q: 'Red, blue and yellow are called ___ colours.', options: ['Secondary', 'Tertiary', 'Primary', 'Neutral'], answer: 'Primary', type: 'mc' });
     v.push({ q: 'Mixing red and blue gives ___', options: ['Green', 'Orange', 'Purple', 'Brown'], answer: 'Purple', type: 'mc' });
+    if (isUpper) {
+      v.push({ q: 'Mixing yellow and blue gives ___', options: ['Red', 'Green', 'Purple', 'Orange'], answer: 'Green', type: 'mc' });
+      v.push({ q: 'Secondary colours are obtained by mixing two ___ colours.', options: ['Tertiary', 'Primary', 'Neutral', 'Cool'], answer: 'Primary', type: 'mc' });
+      v.push({ q: 'A colour wheel shows the relationship between ___', options: ['Numbers', 'Colours', 'Shapes', 'Lines'], answer: 'Colours', type: 'mc' });
+      v.push({ q: 'In art, the element that refers to the lightness or darkness of a colour is ___', options: ['Hue', 'Value', 'Texture', 'Line'], answer: 'Value', type: 'mc' });
+      v.push({ q: 'Weaving involves interlacing ___ threads.', options: ['Warp and weft', 'Top and bottom', 'Left and right', 'Long and short'], answer: 'Warp and weft', type: 'mc' });
+      v.push({ q: 'Kente cloth originates from the ___ people of Ghana.', options: ['Ga', 'Ewe', 'Ashanti', 'Dagomba'], answer: 'Ashanti', type: 'mc' });
+      v.push({ q: 'Clay is the main material used in ___', options: ['Weaving', 'Carving', 'Pottery/Ceramics', 'Painting'], answer: 'Pottery/Ceramics', type: 'mc' });
+      v.push({ q: 'A still life drawing involves drawing ___', options: ['Moving animals', 'Stationary objects', 'Landscapes only', 'People only'], answer: 'Stationary objects', type: 'mc' });
+    }
     if (isJhs) {
       v.push({ q: 'Kente cloth is associated with the ___ people of Ghana.', options: ['Ga', 'Ewe', 'Ashanti', 'Dagomba'], answer: 'Ashanti', type: 'mc' });
       v.push({ q: 'The Adinkra symbol "Sankofa" means ___', options: ['Bravery', 'Go back and get it', 'Unity', 'Strength'], answer: 'Go back and get it', type: 'mc' });
@@ -1128,6 +1165,13 @@ const SUBJECTIVE_BANKS: Record<string, Record<string, { q: string; answer: strin
       ]},
     ],
     'graph': [
+      { q: 'The table below shows the favourite fruits of pupils in a Basic 6 class.\n\nFruit:      Mango   Orange   Banana   Pineapple   Pawpaw\nNo. of pupils:  8       12       6        4          10\n\nUsing the information above, answer the questions that follow.', answer: '', marks: 15, subQs: [
+        { label: 'a', q: 'Draw a bar graph to represent the information above.', answer: 'Bar graph requirements:\n- Title: "Bar Graph showing Favourite Fruits"\n- X-axis: Fruit names (Mango, Orange, Banana, Pineapple, Pawpaw)\n- Y-axis: Number of pupils (0 to 14) with scale of 2\n- 5 bars drawn at correct heights: 8, 12, 6, 4, 10\n- Bars of equal width with equal spacing\n- Both axes clearly labelled', marks: 5 },
+        { label: 'b', q: 'Which fruit is the most popular?', answer: 'Orange is the most popular fruit because it has the highest number of pupils (12).', marks: 2 },
+        { label: 'c', q: 'How many pupils are in the class altogether?', answer: 'Total pupils = 8 + 12 + 6 + 4 + 10 = 40 pupils', marks: 3 },
+        { label: 'd', q: 'What fraction of the class chose Banana?', answer: 'Fraction = 6/40 = 3/20', marks: 2 },
+        { label: 'e', q: 'How many more pupils chose Orange than Pineapple?', answer: 'Difference = 12 - 4 = 8 more pupils', marks: 3 },
+      ]},
       { q: 'The table below shows the marks obtained by students in a Mathematics test.\n\nMarks:  2  4  6  8  10\nFrequency: 3  5  8  4  2\n\nUsing the information above, answer the questions that follow. (Use the graph paper provided)', answer: '', marks: 15, subQs: [
         { label: 'a', q: 'Draw a bar graph to represent the information.', answer: 'Bar graph requirements:\n- Title: "Bar Graph of Marks Obtained by Students"\n- X-axis: Marks (2, 4, 6, 8, 10) with equal spacing\n- Y-axis: Frequency (0 to 10) with suitable scale\n- 5 bars drawn at correct heights: 3, 5, 8, 4, 2\n- Bars of equal width with gaps between them\n- Both axes clearly labelled', marks: 6 },
         { label: 'b', q: 'What is the modal mark?', answer: 'The modal mark is 6.\nReason: It has the highest frequency of 8.', marks: 2 },
@@ -1233,7 +1277,7 @@ const SUBJECTIVE_BANKS: Record<string, Record<string, { q: string; answer: strin
   },
 };
 
-function getQuestionsFromBank(subject: string, topics: string[], count: number, classLevel?: ClassLevel): Question[] {
+function getQuestionsFromBank(subject: string, topics: string[], count: number, classLevel?: ClassLevel, difficulty?: string): Question[] {
   const subjectBank = QUESTION_BANKS[subject] || {};
   let allQuestions: { q: string; options?: string[]; answer: string; type: string }[] = [];
   
@@ -1257,7 +1301,7 @@ function getQuestionsFromBank(subject: string, topics: string[], count: number, 
   // Add dynamic NaCCA class-level-appropriate questions
   const cl = classLevel || 'Basic 4' as ClassLevel;
   if (subject === 'Mathematics') {
-    allQuestions = [...allQuestions, ...generateMathVariations(cl, topics)];
+    allQuestions = [...allQuestions, ...generateMathVariations(cl, topics, difficulty)];
   }
   allQuestions = [...allQuestions, ...generateLevelQuestions(subject, cl, topics)];
   
@@ -1604,7 +1648,7 @@ export function generateExamPaper(config: {
 
     const needed = config.objectiveCount - objectiveQuestions.length;
     if (needed > 0) {
-      const bankQs = getQuestionsFromBank(config.subject as string, allTopics, needed, config.classLevel);
+      const bankQs = getQuestionsFromBank(config.subject as string, allTopics, needed, config.classLevel, config.difficulty);
       objectiveQuestions = [...objectiveQuestions, ...bankQs];
     } else {
       objectiveQuestions = objectiveQuestions.slice(0, config.objectiveCount);

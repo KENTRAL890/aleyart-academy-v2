@@ -111,6 +111,16 @@ export default function ExamPreview({ exam, onUpdate }: Props) {
     ));
   };
 
+  const applySubQuestionLabelPattern = (pattern: 'alpha' | 'roman') => {
+    const alpha = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    const roman = ['ai', 'aii', 'aiii', 'aiv', 'av', 'avi', 'avii', 'aviii'];
+    const source = pattern === 'alpha' ? alpha : roman;
+    setEditSubQuestions(editSubQuestions.map((sq, idx) => ({
+      ...sq,
+      label: source[idx] || `${pattern === 'alpha' ? 'a' : 'ai'}${idx + 1}`,
+    })));
+  };
+
   const renderObjectiveEditor = (_q: Question, sIdx: number, qIdx: number) => (
     <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3 no-print mb-3">
       <label className="text-xs font-medium text-gray-500 block mb-1">Question:</label>
@@ -309,11 +319,39 @@ export default function ExamPreview({ exam, onUpdate }: Props) {
 
       {editSubQuestions.length > 0 && (
         <div className="space-y-2 mb-3">
-          <label className="text-xs font-medium text-gray-500 block">Sub-Questions:</label>
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-xs font-medium text-gray-500 block">Sub-Questions:</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => applySubQuestionLabelPattern('alpha')}
+                className="px-2 py-1 text-[10px] bg-blue-50 text-blue-700 border border-blue-200 rounded font-semibold"
+              >
+                Auto: a, b, c...
+              </button>
+              <button
+                type="button"
+                onClick={() => applySubQuestionLabelPattern('roman')}
+                className="px-2 py-1 text-[10px] bg-purple-50 text-purple-700 border border-purple-200 rounded font-semibold"
+              >
+                Auto: ai, aii...
+              </button>
+            </div>
+          </div>
           {editSubQuestions.map((sq, sqIdx) => (
             <div key={sq.id} className="bg-white p-3 rounded border">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-bold text-blue-600">({sq.label})</span>
+                <input
+                  value={sq.label}
+                  onChange={e => {
+                    const u = [...editSubQuestions];
+                    u[sqIdx] = { ...u[sqIdx], label: e.target.value };
+                    setEditSubQuestions(u);
+                  }}
+                  className="w-20 px-2 py-1 border rounded text-xs font-bold text-blue-700 text-center"
+                  placeholder="a / ai"
+                  title="Sub-question label"
+                />
                 <input
                   value={sq.question}
                   onChange={e => {
@@ -353,9 +391,8 @@ export default function ExamPreview({ exam, onUpdate }: Props) {
           ))}
           <button
             onClick={() => {
-              const newLabel = editSubQuestions.length > 0
-                ? String.fromCharCode(editSubQuestions[editSubQuestions.length - 1].label.charCodeAt(0) + 1)
-                : 'a';
+              const alpha = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+              const newLabel = alpha[editSubQuestions.length] || `a${editSubQuestions.length + 1}`;
               setEditSubQuestions([...editSubQuestions, {
                 id: `sq_${Date.now()}`,
                 label: newLabel,
@@ -445,7 +482,7 @@ export default function ExamPreview({ exam, onUpdate }: Props) {
                       </p>
                       {q.imageUrl && (
                         <div style={{ margin: '8px 0 8px 20px' }}>
-                          <img src={q.imageUrl} alt="Diagram" style={{ maxWidth: '240px', border: '1px solid #ccc', borderRadius: '4px' }} />
+                          <img src={q.imageUrl} alt="Diagram" style={{ maxWidth: '100%', width: '260px', maxHeight: '220px', objectFit: 'contain', display: 'block', border: '1px solid #ccc', borderRadius: '4px', background: '#fff' }} />
                           {q.diagramLabels && q.diagramLabels.length > 0 && (
                             <div style={{ marginTop: '4px', fontSize: '10pt', color: '#334155' }}>
                               {q.diagramLabels.map((dl, dlIdx) => (
@@ -506,7 +543,7 @@ export default function ExamPreview({ exam, onUpdate }: Props) {
 
                       {q.imageUrl && (
                         <div style={{ margin: '8px 0' }}>
-                          <img src={q.imageUrl} alt="Question illustration" style={{ maxWidth: '300px', border: '1px solid #ccc', borderRadius: '4px' }} />
+                          <img src={q.imageUrl} alt="Question illustration" style={{ maxWidth: '100%', width: '320px', maxHeight: '260px', objectFit: 'contain', display: 'block', border: '1px solid #ccc', borderRadius: '4px', background: '#fff' }} />
                           {q.diagramLabels && q.diagramLabels.length > 0 && (
                             <div style={{ marginTop: '6px', fontSize: '14pt', lineHeight: '1.6' }}>
                               <p style={{ fontWeight: 700, fontSize: '14pt', margin: '0 0 4px 0' }}>Identify the parts labelled below:</p>
@@ -527,7 +564,7 @@ export default function ExamPreview({ exam, onUpdate }: Props) {
                           </p>
                           {sq.imageUrl && (
                             <div style={{ margin: '4px 0' }}>
-                              <img src={sq.imageUrl} alt="Sub-question illustration" style={{ maxWidth: '250px', border: '1px solid #ccc', borderRadius: '4px' }} />
+                              <img src={sq.imageUrl} alt="Sub-question illustration" style={{ maxWidth: '100%', width: '260px', maxHeight: '220px', objectFit: 'contain', display: 'block', border: '1px solid #ccc', borderRadius: '4px', background: '#fff' }} />
                             </div>
                           )}
                           {isBasic1to3 && renderAnswerLines(3)}

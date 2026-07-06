@@ -98,7 +98,7 @@ export default function MarkingSchemeView({ exam }: Props) {
                   {q.imageUrl && (
                     <div style={{ margin: '8px 0', padding: '6px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '4px', display: 'inline-block' }}>
                       <span style={{ fontSize: '8pt', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '4px' }}>📌 Diagram Reference:</span>
-                      <img src={q.imageUrl} alt="Marking scheme reference diagram" style={{ maxHeight: '110px', borderRadius: '2px' }} />
+                      <img src={q.imageUrl} alt="Marking scheme reference diagram" style={{ maxWidth: '100%', width: '220px', maxHeight: '160px', objectFit: 'contain', display: 'block', borderRadius: '2px', background: '#fff' }} />
                     </div>
                   )}
 
