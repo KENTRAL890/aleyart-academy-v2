@@ -6,8 +6,9 @@ import SavedExams from './SavedExams';
 import EarlyChildhood from './EarlyChildhood';
 import OMRGenerator from './OMRGenerator';
 import AnswerBooklet from './AnswerBookletGen';
+import GraphPaper from './GraphPaper';
 
-type Page = 'home' | 'generate' | 'saved' | 'early' | 'omr' | 'booklet' | 'special';
+type Page = 'home' | 'generate' | 'saved' | 'early' | 'omr' | 'booklet' | 'special' | 'graphpaper';
 
 interface Props {
   user: User;
@@ -49,6 +50,7 @@ export default function Dashboard({ user, onLogout }: Props) {
         { id: 'early' as Page, label: 'Early Childhood Tracking', icon: '🧒', desc: 'Crèche – KG2 NaCCA SBA' },
         { id: 'omr' as Page, label: 'BECE Box OMR Sheets', icon: '📋', desc: 'Standard A4 horizontal shading' },
         { id: 'booklet' as Page, label: 'Exam Answer Booklets', icon: '📖', desc: 'Ruled booklets with margin lines' },
+        { id: 'graphpaper' as Page, label: 'Graph Paper Sheets', icon: '📊', desc: 'A4 graph paper for maths exams' },
       ],
     },
   ];
@@ -67,6 +69,8 @@ export default function Dashboard({ user, onLogout }: Props) {
         return <AnswerBooklet />;
       case 'special':
         return <ExamGenerator user={user} specialMode={true} />;
+      case 'graphpaper':
+        return <GraphPaper />;
       case 'home':
       default:
         return <HomePage user={user} onNavigate={setCurrentPage} />;

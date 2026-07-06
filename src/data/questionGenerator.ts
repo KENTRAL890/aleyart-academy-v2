@@ -22,6 +22,73 @@ function shuffle<T>(arr: T[]): T[] {
 
 type QItem = { q: string; options: string[]; answer: string; type: string };
 
+// Generate Venn diagram SVG based on set values
+function generateVennDiagramSvg(setA: string, setB: string, aOnly: number, both: number, bOnly: number, neither: number, total: number): string {
+  return `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 240">
+    <rect x="5" y="5" width="370" height="230" fill="#f8fafc" stroke="#1e293b" stroke-width="2" rx="8"/>
+    <text x="350" y="25" font-size="13" font-weight="bold" text-anchor="end" fill="#1e293b">U = ${total}</text>
+    <circle cx="140" cy="125" r="75" fill="rgba(59,130,246,0.15)" stroke="#2563eb" stroke-width="2.5"/>
+    <circle cx="240" cy="125" r="75" fill="rgba(239,68,68,0.15)" stroke="#dc2626" stroke-width="2.5"/>
+    <text x="100" y="50" font-size="14" font-weight="bold" fill="#1d4ed8" text-anchor="middle">${setA}</text>
+    <text x="280" y="50" font-size="14" font-weight="bold" fill="#dc2626" text-anchor="middle">${setB}</text>
+    <text x="110" y="130" font-size="18" font-weight="bold" fill="#1e293b" text-anchor="middle">${aOnly}</text>
+    <text x="190" y="130" font-size="18" font-weight="bold" fill="#7c3aed" text-anchor="middle">${both}</text>
+    <text x="270" y="130" font-size="18" font-weight="bold" fill="#1e293b" text-anchor="middle">${bOnly}</text>
+    <text x="340" y="215" font-size="15" font-weight="bold" fill="#64748b">${neither}</text>
+  </svg>`)}`;
+}
+
+// Generate construction diagram SVG
+function generateConstructionSvg(type: 'angle_bisector' | 'perpendicular' | 'triangle_60'): string {
+  if (type === 'angle_bisector') {
+    return `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 220">
+      <line x1="30" y1="180" x2="270" y2="180" stroke="#1e293b" stroke-width="2"/>
+      <line x1="30" y1="180" x2="200" y2="40" stroke="#1e293b" stroke-width="2"/>
+      <path d="M 80,180 A 50,50 0 0,1 67,145" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,4"/>
+      <line x1="30" y1="180" x2="240" y2="100" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="6,4"/>
+      <text x="90" y="175" font-size="11" fill="#1e293b">60°</text>
+      <text x="60" y="155" font-size="10" fill="#dc2626">30°</text>
+      <text x="100" y="190" font-size="10" fill="#dc2626">30°</text>
+      <text x="250" y="95" font-size="11" fill="#dc2626" font-weight="bold">Bisector</text>
+      <circle cx="72" cy="162" r="2.5" fill="#2563eb"/>
+      <circle cx="82" cy="170" r="2.5" fill="#2563eb"/>
+      <text x="15" y="195" font-size="12" font-weight="bold" fill="#1e293b">O</text>
+    </svg>`)}`;
+  }
+  if (type === 'perpendicular') {
+    return `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 220">
+      <line x1="30" y1="150" x2="270" y2="150" stroke="#1e293b" stroke-width="2"/>
+      <line x1="150" y1="150" x2="150" y2="30" stroke="#dc2626" stroke-width="2"/>
+      <rect x="150" y="138" width="12" height="12" fill="none" stroke="#1e293b" stroke-width="1.5"/>
+      <path d="M 100,150 A 50,50 0 0,1 150,100" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,4"/>
+      <path d="M 200,150 A 50,50 0 0,0 150,100" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,4"/>
+      <circle cx="100" cy="150" r="3" fill="#2563eb"/>
+      <circle cx="200" cy="150" r="3" fill="#2563eb"/>
+      <circle cx="150" cy="100" r="3" fill="#dc2626"/>
+      <text x="145" y="170" font-size="11" font-weight="bold" fill="#1e293b">P</text>
+      <text x="25" y="165" font-size="11" fill="#1e293b">A</text>
+      <text x="265" y="165" font-size="11" fill="#1e293b">B</text>
+      <text x="155" y="25" font-size="11" fill="#dc2626" font-weight="bold">⊥</text>
+      <text x="160" y="130" font-size="9" fill="#1e293b">90°</text>
+    </svg>`)}`;
+  }
+  // triangle_60
+  return `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 240">
+    <line x1="50" y1="200" x2="250" y2="200" stroke="#1e293b" stroke-width="2"/>
+    <line x1="50" y1="200" x2="150" y2="27" stroke="#1e293b" stroke-width="2"/>
+    <line x1="250" y1="200" x2="150" y2="27" stroke="#1e293b" stroke-width="2"/>
+    <path d="M 80,200 A 30,30 0 0,1 65,180" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+    <text x="80" y="192" font-size="11" fill="#2563eb">60°</text>
+    <text x="40" y="215" font-size="12" font-weight="bold" fill="#1e293b">A</text>
+    <text x="250" y="215" font-size="12" font-weight="bold" fill="#1e293b">B</text>
+    <text x="145" y="20" font-size="12" font-weight="bold" fill="#1e293b">C</text>
+    <text x="130" y="220" font-size="11" fill="#64748b">8 cm</text>
+    <circle cx="50" cy="200" r="3" fill="#2563eb"/>
+    <circle cx="250" cy="200" r="3" fill="#2563eb"/>
+    <circle cx="150" cy="27" r="3" fill="#dc2626"/>
+  </svg>`)}`;
+}
+
 // NaCCA class level ranges
 const LOWER_PRIMARY: ClassLevel[] = ['Basic 1', 'Basic 2', 'Basic 3'];
 const UPPER_PRIMARY: ClassLevel[] = ['Basic 4', 'Basic 5', 'Basic 6'];
@@ -66,7 +133,7 @@ function generateMathVariations(classLevel: ClassLevel, topics: string[]): QItem
   }
 
   if (isLevel(classLevel, JHS)) {
-    // Basic 7-9: algebra, sets, trigonometry, statistics NaCCA CCP
+    // Basic 7-9: algebra, sets, trigonometry, statistics, graphs, pie chart, circumference NaCCA CCP
     for (let i = 0; i < 4; i++) { const a = r(2, 8); const b = r(3, 15); const c = a*r(2,6)+b; v.push({ q: `Solve: ${a}x + ${b} = ${c}`, options: w((c-b)/a, 3), answer: String((c-b)/a), type: 'mc' }); }
     v.push({ q: 'If A = {1,2,3,4} and B = {3,4,5,6}, find A ∩ B.', options: ['{1,2}', '{3,4}', '{5,6}', '{1,2,3,4,5,6}'], answer: '{3,4}', type: 'mc' });
     v.push({ q: 'If A = {a,b,c,d,e}, find n(A).', options: ['3', '4', '5', '6'], answer: '5', type: 'mc' });
@@ -79,6 +146,48 @@ function generateMathVariations(classLevel: ClassLevel, topics: string[]): QItem
     v.push({ q: 'If sin θ = 3/5, what is cos θ?', options: ['3/5', '4/5', '5/3', '3/4'], answer: '4/5', type: 'mc' });
     v.push({ q: 'A bag contains 3 red and 5 blue balls. What is the probability of picking a red ball?', options: ['1/8', '3/8', '5/8', '3/5'], answer: '3/8', type: 'mc' });
     v.push({ q: 'Simplify: 2(3x + 4) - 5x', options: ['x + 8', '11x + 8', 'x + 4', '6x + 4'], answer: 'x + 8', type: 'mc' });
+
+    // ========== SETS (NaCCA CCP) ==========
+    v.push({ q: 'If P = {2,4,6,8} and Q = {1,2,3,4}, find P ∪ Q.', options: ['{2,4}', '{1,2,3,4,6,8}', '{6,8}', '{1,3}'], answer: '{1,2,3,4,6,8}', type: 'mc' });
+    v.push({ q: 'If n(A) = 10, n(B) = 8 and n(A ∩ B) = 3, find n(A ∪ B).', options: ['15', '18', '21', '5'], answer: '15', type: 'mc' });
+    v.push({ q: 'The complement of set A is written as ___', options: ['A∪B', 'A∩B', "A'", 'A×B'], answer: "A'", type: 'mc' });
+    v.push({ q: 'In a class of 40, 25 play football and 20 play volleyball. If 10 play both, how many play neither?', options: ['5', '10', '15', '0'], answer: '5', type: 'mc' });
+    v.push({ q: 'If U = {1,2,3,4,5,6,7,8,9,10} and A = {2,4,6,8,10}, find n(A\').', options: ['3', '4', '5', '6'], answer: '5', type: 'mc' });
+    v.push({ q: 'The set with no element is called ___', options: ['Universal set', 'Empty set', 'Subset', 'Finite set'], answer: 'Empty set', type: 'mc' });
+
+    // ========== CIRCUMFERENCE & CIRCLE (NaCCA CCP — Take π = 22/7) ==========
+    const radii = [7, 14, 21, 3.5];
+    const ri = radii[r(0, radii.length - 1)];
+    const circ = Math.round(2 * (22/7) * ri * 100) / 100;
+    v.push({ q: `Calculate the circumference of a circle with radius ${ri}cm. (Take π = 22/7)`, options: w(circ, 10).map(x => x + 'cm'), answer: circ + 'cm', type: 'mc' });
+    v.push({ q: 'The formula for the circumference of a circle is ___', options: ['πr²', '2πr', 'πd²', '2πr²'], answer: '2πr', type: 'mc' });
+    const di = [14, 28, 42, 7];
+    const dd = di[r(0, di.length - 1)];
+    const circD = Math.round((22/7) * dd * 100) / 100;
+    v.push({ q: `Find the circumference of a circle with diameter ${dd}cm. (Take π = 22/7)`, options: w(circD, 8).map(x => x + 'cm'), answer: circD + 'cm', type: 'mc' });
+    const areaR = radii[r(0, radii.length - 1)];
+    const areaAns = Math.round((22/7) * areaR * areaR * 100) / 100;
+    v.push({ q: `Calculate the area of a circle with radius ${areaR}cm. (Take π = 22/7)`, options: w(areaAns, 20).map(x => x + 'cm²'), answer: areaAns + 'cm²', type: 'mc' });
+    v.push({ q: 'The area of a circle is given by the formula ___', options: ['2πr', 'πr²', 'πd', '2πr²'], answer: 'πr²', type: 'mc' });
+
+    // ========== GRAPHS & COORDINATES (NaCCA CCP) ==========
+    v.push({ q: 'The point where a line crosses the y-axis is called the ___', options: ['Gradient', 'x-intercept', 'y-intercept', 'Origin'], answer: 'y-intercept', type: 'mc' });
+    v.push({ q: 'The coordinates of the origin on a Cartesian plane are ___', options: ['(1,1)', '(0,1)', '(1,0)', '(0,0)'], answer: '(0,0)', type: 'mc' });
+    v.push({ q: 'What is the gradient of a horizontal line?', options: ['1', '-1', '0', 'Undefined'], answer: '0', type: 'mc' });
+    v.push({ q: 'What is the gradient of a vertical line?', options: ['1', '-1', '0', 'Undefined'], answer: 'Undefined', type: 'mc' });
+    v.push({ q: 'The equation y = 2x + 3 is a ___ equation.', options: ['Quadratic', 'Linear', 'Cubic', 'Simultaneous'], answer: 'Linear', type: 'mc' });
+    v.push({ q: 'Find the y-intercept of the line y = 4x - 7.', options: ['4', '-4', '7', '-7'], answer: '-7', type: 'mc' });
+    v.push({ q: 'The point (3, 5) means x = ___ and y = ___.', options: ['x=5, y=3', 'x=3, y=5', 'x=8, y=2', 'x=3, y=3'], answer: 'x=3, y=5', type: 'mc' });
+
+    // ========== PIE CHART / DATA HANDLING (NaCCA CCP) ==========
+    v.push({ q: 'A pie chart is drawn using a ___', options: ['Ruler', 'Protractor', 'Set square', 'Compass'], answer: 'Protractor', type: 'mc' });
+    v.push({ q: 'The total angle in a pie chart is ___', options: ['90°', '180°', '270°', '360°'], answer: '360°', type: 'mc' });
+    v.push({ q: 'In a pie chart, if a sector represents 25% of the data, its angle is ___', options: ['25°', '45°', '90°', '180°'], answer: '90°', type: 'mc' });
+    v.push({ q: 'If 60 students chose Mathematics out of 180 students in a survey, what angle represents Mathematics on a pie chart?', options: ['60°', '90°', '120°', '180°'], answer: '120°', type: 'mc' });
+    v.push({ q: 'A bar graph uses ___ to represent data.', options: ['Lines', 'Bars', 'Dots', 'Curves'], answer: 'Bars', type: 'mc' });
+    v.push({ q: 'The mean of 4, 6, 8, 10 and 12 is ___', options: ['6', '7', '8', '10'], answer: '8', type: 'mc' });
+    v.push({ q: 'The range of the data set {3, 7, 12, 5, 9} is ___', options: ['5', '7', '9', '12'], answer: '9', type: 'mc' });
+    v.push({ q: 'The mode of the data 2, 3, 3, 5, 7, 3, 8 is ___', options: ['2', '3', '5', '7'], answer: '3', type: 'mc' });
   }
 
   return v;
@@ -1016,6 +1125,64 @@ const SUBJECTIVE_BANKS: Record<string, Record<string, { q: string; answer: strin
         { label: 'a', q: 'Find the total cost price.', answer: 'Solution:\nCost price of one orange = GH₵2.00\nNumber of oranges = 50\nTotal Cost Price = 50 × GH₵2.00\nTotal Cost Price = GH₵100.00', marks: 3 },
         { label: 'b', q: 'Find the total selling price.', answer: 'Solution:\nSelling price of one orange = GH₵3.00\nNumber of oranges = 50\nTotal Selling Price = 50 × GH₵3.00\nTotal Selling Price = GH₵150.00', marks: 3 },
         { label: 'c', q: 'Calculate the profit made.', answer: 'Solution:\nProfit = Total Selling Price - Total Cost Price\nProfit = GH₵150.00 - GH₵100.00\nProfit = GH₵50.00\n\nTherefore, the trader made a profit of GH₵50.00', marks: 4 },
+      ]},
+    ],
+    'graph': [
+      { q: 'The table below shows the marks obtained by students in a Mathematics test.\n\nMarks:  2  4  6  8  10\nFrequency: 3  5  8  4  2\n\nUsing the information above, answer the questions that follow. (Use the graph paper provided)', answer: '', marks: 15, subQs: [
+        { label: 'a', q: 'Draw a bar graph to represent the information.', answer: 'Bar graph requirements:\n- Title: "Bar Graph of Marks Obtained by Students"\n- X-axis: Marks (2, 4, 6, 8, 10) with equal spacing\n- Y-axis: Frequency (0 to 10) with suitable scale\n- 5 bars drawn at correct heights: 3, 5, 8, 4, 2\n- Bars of equal width with gaps between them\n- Both axes clearly labelled', marks: 6 },
+        { label: 'b', q: 'What is the modal mark?', answer: 'The modal mark is 6.\nReason: It has the highest frequency of 8.', marks: 2 },
+        { label: 'c', q: 'Calculate the mean mark.', answer: 'Mean = Sum of (marks × frequency) ÷ Total frequency\n= (2×3 + 4×5 + 6×8 + 8×4 + 10×2) ÷ (3+5+8+4+2)\n= (6 + 20 + 48 + 32 + 20) ÷ 22\n= 126 ÷ 22\n= 5.73 (to 2 decimal places)', marks: 4 },
+        { label: 'd', q: 'How many students took the test altogether?', answer: 'Total students = 3 + 5 + 8 + 4 + 2 = 22 students', marks: 3 },
+      ]},
+    ],
+    'pie_chart': [
+      { q: 'In a school of 360 students, their favourite subjects are shown below:\n\nMathematics: 120 students\nEnglish: 90 students\nScience: 80 students\nSocial Studies: 70 students\n\nUsing the data above, answer the following questions.', answer: '', marks: 15, subQs: [
+        { label: 'a', q: 'Calculate the angle that represents each subject on a pie chart.', answer: 'Total = 360 students\nMathematics = (120/360) × 360° = 120°\nEnglish = (90/360) × 360° = 90°\nScience = (80/360) × 360° = 80°\nSocial Studies = (70/360) × 360° = 70°\n\nCheck: 120° + 90° + 80° + 70° = 360° ✓', marks: 5 },
+        { label: 'b', q: 'Draw a pie chart to represent the data. (Use a protractor)', answer: 'Pie chart requirements:\n- Circle drawn with compass\n- Title: "Pie Chart showing Favourite Subjects"\n- Sectors drawn accurately with protractor:\n  Mathematics: 120°, English: 90°, Science: 80°, Social Studies: 70°\n- Each sector labelled with subject name\n- Key/Legend provided', marks: 6 },
+        { label: 'c', q: 'What fraction of the students chose Science?', answer: 'Fraction = 80/360 = 2/9', marks: 2 },
+        { label: 'd', q: 'What percentage of the students chose English?', answer: 'Percentage = (90/360) × 100% = 25%', marks: 2 },
+      ]},
+    ],
+    'sets': [
+      { q: 'In a class of 50 students, 30 study French (F) and 25 study Twi (T). 10 students study both French and Twi.\n\nStudy the Venn diagram below and answer the questions that follow.\n\n[See Diagram]', answer: '', marks: 15, imageUrl: generateVennDiagramSvg('F', 'T', 20, 10, 15, 5, 50), subQs: [
+        { label: 'a', q: 'Draw a Venn diagram to illustrate the information.', answer: 'Venn Diagram:\n- Universal set rectangle labelled U = 50\n- Circle F (French): 30 total\n- Circle T (Twi): 25 total\n- Intersection F ∩ T = 10\n- F only = 30 - 10 = 20\n- T only = 25 - 10 = 15\n- Neither = 50 - (20 + 10 + 15) = 5', marks: 5 },
+        { label: 'b', q: 'How many students study French only?', answer: 'French only = n(F) - n(F ∩ T) = 30 - 10 = 20 students', marks: 3 },
+        { label: 'c', q: 'How many students study Twi only?', answer: 'Twi only = n(T) - n(F ∩ T) = 25 - 10 = 15 students', marks: 3 },
+        { label: 'd', q: 'How many students study neither French nor Twi?', answer: 'Neither = Total - n(F ∪ T)\nn(F ∪ T) = n(F) + n(T) - n(F ∩ T) = 30 + 25 - 10 = 45\nNeither = 50 - 45 = 5 students', marks: 4 },
+      ]},
+    ],
+    'circumference': [
+      { q: 'A circular fish pond has a radius of 14m. (Take π = 22/7)', answer: '', marks: 15, subQs: [
+        { label: 'a', q: 'Calculate the circumference of the fish pond.', answer: 'Circumference = 2πr\n= 2 × 22/7 × 14\n= 2 × 22 × 2\n= 88m\n\nThe circumference of the fish pond is 88m.', marks: 4 },
+        { label: 'b', q: 'Calculate the area of the fish pond.', answer: 'Area = πr²\n= 22/7 × 14 × 14\n= 22/7 × 196\n= 22 × 28\n= 616m²\n\nThe area of the fish pond is 616m².', marks: 4 },
+        { label: 'c', q: 'If the pond is to be fenced with wire at GH₵25 per metre, calculate the total cost of fencing.', answer: 'Length of fence = Circumference = 88m\nCost per metre = GH₵25\nTotal cost = 88 × GH₵25\n= GH₵2,200.00', marks: 4 },
+        { label: 'd', q: 'What is the diameter of the fish pond?', answer: 'Diameter = 2 × radius\n= 2 × 14\n= 28m', marks: 3 },
+      ]},
+    ],
+    'construction': [
+      { q: 'Using a ruler, a pair of compasses and a pencil only, carry out the following constructions.\n\n[See Diagram for reference]', answer: '', marks: 15,
+        imageUrl: generateConstructionSvg('angle_bisector'),
+        subQs: [
+        { label: 'a', q: 'Construct an angle of 60° at a point O on a straight line.', answer: 'Step 1: Draw a straight line and mark point O on it.\nStep 2: With O as centre and any convenient radius, draw an arc to cut the line at point A.\nStep 3: With A as centre and the same radius, draw an arc to cut the first arc at point B.\nStep 4: Draw a straight line from O through B.\nAngle AOB = 60°.', marks: 5 },
+        { label: 'b', q: 'Bisect the 60° angle constructed in (a) above.', answer: 'Step 1: With A as centre and any convenient radius, draw an arc.\nStep 2: With B as centre and the same radius, draw an arc to cut the arc in Step 1 at point C.\nStep 3: Draw a straight line from O through C.\nLine OC is the bisector of the 60° angle.\nEach half = 30°.', marks: 5 },
+        { label: 'c', q: 'What is the size of each of the two angles formed by the bisector?', answer: 'Each angle = 60° ÷ 2 = 30°', marks: 2 },
+        { label: 'd', q: 'Measure and state the size of each angle with a protractor to verify your construction.', answer: 'Both angles should measure 30° each when measured with a protractor.\nTotal = 30° + 30° = 60° ✓', marks: 3 },
+      ]},
+      { q: 'Using a ruler and a pair of compasses only, carry out the following constructions.\n\n[See Diagram for reference]', answer: '', marks: 15,
+        imageUrl: generateConstructionSvg('perpendicular'),
+        subQs: [
+        { label: 'a', q: 'Construct a line segment AB = 8cm.', answer: 'Using a ruler, draw a straight line and mark two points A and B such that AB = 8cm.', marks: 2 },
+        { label: 'b', q: 'Construct the perpendicular bisector of line AB.', answer: 'Step 1: With A as centre and radius more than half of AB, draw arcs above and below the line.\nStep 2: With B as centre and the same radius, draw arcs to intersect the arcs in Step 1 at points P and Q.\nStep 3: Draw a straight line through P and Q.\nThis line PQ is the perpendicular bisector of AB.', marks: 6 },
+        { label: 'c', q: 'Mark the midpoint of AB and label it M. State the length of AM.', answer: 'The perpendicular bisector crosses AB at its midpoint M.\nAM = AB ÷ 2 = 8 ÷ 2 = 4cm.', marks: 3 },
+        { label: 'd', q: 'What angle does the perpendicular bisector make with line AB?', answer: 'The perpendicular bisector makes an angle of 90° with line AB.', marks: 4 },
+      ]},
+      { q: 'Using a ruler and a pair of compasses only, construct triangle ABC where AB = 8cm, angle BAC = 60° and AC = 6cm.\n\n[See Diagram for reference]', answer: '', marks: 15,
+        imageUrl: generateConstructionSvg('triangle_60'),
+        subQs: [
+        { label: 'a', q: 'Construct the triangle ABC with the given measurements.', answer: 'Step 1: Draw line AB = 8cm using a ruler.\nStep 2: At point A, construct an angle of 60° using compasses.\nStep 3: Along the 60° line, measure AC = 6cm and mark point C.\nStep 4: Join B to C to complete triangle ABC.', marks: 6 },
+        { label: 'b', q: 'Measure and state the length of BC.', answer: 'Using a ruler, measure BC from the constructed triangle.\nBC ≈ 7.2cm (accept values between 7.0cm and 7.4cm).', marks: 3 },
+        { label: 'c', q: 'Measure angle ABC and angle ACB.', answer: 'Using a protractor:\nAngle ABC ≈ 46° (accept 44°-48°)\nAngle ACB ≈ 74° (accept 72°-76°)\nCheck: 60° + 46° + 74° = 180° ✓', marks: 3 },
+        { label: 'd', q: 'Calculate the area of triangle ABC.', answer: 'Area = 1/2 × AB × AC × sin(BAC)\n= 1/2 × 8 × 6 × sin 60°\n= 1/2 × 8 × 6 × 0.866\n= 20.78cm²', marks: 3 },
       ]},
     ],
   },
