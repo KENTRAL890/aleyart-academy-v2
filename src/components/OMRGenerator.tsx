@@ -147,9 +147,7 @@ export default function OMRGenerator() {
           ))}
         </div>
 
-        <div style={{ position: 'absolute', bottom: compact ? '8mm' : '15mm', left: leftPad, right: rightPad, borderTop: '2px solid #000', paddingTop: '4px', textAlign: 'center', fontSize: compact ? '6.5pt' : '8pt', fontWeight: 'bold', color: '#555' }}>
-          DO NOT MAKE ANY STRAY MARKS ON THIS SHEET
-        </div>
+        <div style={{ position: 'absolute', bottom: compact ? '8mm' : '15mm', left: leftPad, right: rightPad }} />
       </div>
     );
   };
@@ -165,8 +163,8 @@ export default function OMRGenerator() {
         {halfSheet ? (
           <div className="omr-sheet-page" style={{ width: '210mm', height: '297mm', background: 'white', margin: '0 auto', boxShadow: '0 0 12px rgba(0,0,0,0.1)', boxSizing: 'border-box', position: 'relative' }}>
             {renderOmrPanel(true, 'COPY 1')}
-            <div style={{ position: 'absolute', top: '148.5mm', left: 0, right: 0, borderTop: '2px dashed #999', textAlign: 'center', zIndex: 2 }}>
-              <span style={{ background: 'white', padding: '0 10px', fontSize: '7pt', color: '#999', position: 'relative', top: '-7px' }}>✂️ CUT / FOLD HERE — EACH COPY IS 210 mm × 148.5 mm ✂️</span>
+            <div style={{ position: 'absolute', top: '148.5mm', left: 0, right: 0, textAlign: 'center', zIndex: 2 }}>
+              <span style={{ background: 'white', padding: '0 10px', fontSize: '7pt', color: '#cbd5e1', position: 'relative', top: '-7px' }}>CUT / FOLD HERE</span>
             </div>
             <div style={{ position: 'absolute', top: '148.5mm', left: 0, right: 0 }}>
               {renderOmrPanel(true, 'COPY 2')}
