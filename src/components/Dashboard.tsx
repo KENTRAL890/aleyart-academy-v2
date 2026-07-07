@@ -7,8 +7,9 @@ import EarlyChildhood from './EarlyChildhood';
 import OMRGenerator from './OMRGenerator';
 import AnswerBooklet from './AnswerBookletGen';
 import GraphPaper from './GraphPaper';
+import TeacherAdmin from './TeacherAdmin';
 
-type Page = 'home' | 'generate' | 'saved' | 'early' | 'omr' | 'booklet' | 'special' | 'graphpaper';
+type Page = 'home' | 'generate' | 'saved' | 'early' | 'omr' | 'booklet' | 'special' | 'graphpaper' | 'teachers';
 
 interface Props {
   user: User;
@@ -51,6 +52,7 @@ export default function Dashboard({ user, onLogout }: Props) {
         { id: 'omr' as Page, label: 'BECE Box OMR Sheets', icon: '📋', desc: 'Standard A4 horizontal shading' },
         { id: 'booklet' as Page, label: 'Exam Answer Booklets', icon: '📖', desc: 'Ruled booklets with margin lines' },
         { id: 'graphpaper' as Page, label: 'Graph Paper Sheets', icon: '📊', desc: 'A4 graph paper for maths exams' },
+        { id: 'teachers' as Page, label: 'Manage Teachers', icon: '👥', desc: 'Create & view teacher accounts' },
       ],
     },
   ];
@@ -71,6 +73,8 @@ export default function Dashboard({ user, onLogout }: Props) {
         return <ExamGenerator user={user} specialMode={true} />;
       case 'graphpaper':
         return <GraphPaper />;
+      case 'teachers':
+        return <TeacherAdmin user={user} />;
       case 'home':
       default:
         return <HomePage user={user} onNavigate={setCurrentPage} />;

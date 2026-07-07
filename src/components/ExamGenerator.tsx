@@ -142,7 +142,6 @@ export default function ExamGenerator({ user, specialMode }: Props) {
 
   // Parse uploaded/pasted document text, auto-detect Section A / Section B headings
   const parseUploadedText = (text: string) => {
-    // Clean text: remove invisible chars, BOM, smart quotes
     const cleaned = text
       .replace(/\uFEFF/g, '')
       .replace(/[\u2018\u2019]/g, "'")
@@ -151,68 +150,139 @@ export default function ExamGenerator({ user, specialMode }: Props) {
       .replace(/\r/g, '\n');
 
     const lines = cleaned.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    let currentSection: 'A' | 'B' | 'auto' = 'auto';
+    let currentSection: 'A' | 'B' | 'C' | 'D' | 'auto' = 'auto';
     const newObj: typeof customObjectives = [];
     const newSubj: typeof customSubjectives = [];
+    // Track which uploaded sections we found for Section B/C/D
+    const uploadedSectionNames: string[] = [];
 
-    for (const line of lines) {
-      const upper = line.toUpperCase().replace(/[^A-Z0-9 ]/g, '');
-      
-      // Detect section headings — skip the line itself
+    let pendingObjective: { question: string; options: string[]; correctAnswer?: string } | null = null;
+    let pendingSubjective: { question: string; answer: string } | null = null;
+
+    const flushObjective = () => {
+      if (!pendingObjective) return;
+      const opts = pendingObjective.options.length >= 4 ? pendingObjective.options.slice(0, 4) : [...pendingObjective.options, 'A. ___', 'B. ___', 'C. ___', 'D. ___'].slice(0, 4);
+      newObj.push({
+        question: pendingObjective.question,
+        options: opts,
+        correctAnswer: pendingObjective.correctAnswer || opts[0],
+      });
+      pendingObjective = null;
+    };
+
+    const flushSubjective = () => {
+      if (!pendingSubjective) return;
+      newSubj.push({
+        question: pendingSubjective.question,
+        answer: pendingSubjective.answer || 'Accept valid NaCCA-aligned answer.',
+        marks: 10,
+      });
+      pendingSubjective = null;
+    };
+
+    for (const rawLine of lines) {
+      const upper = rawLine.toUpperCase().replace(/[^A-Z0-9 ]/g, '');
+
       if (upper.includes('SECTION A') || upper === 'OBJECTIVE' || upper === 'OBJECTIVES' || upper === 'MCQ' || upper === 'MULTIPLE CHOICE') {
-        currentSection = 'A';
+        flushObjective(); flushSubjective(); currentSection = 'A'; continue;
+      }
+      if (upper.includes('SECTION B') || upper === 'SUBJECTIVE' || upper === 'THEORY' || upper === 'ESSAY') {
+        flushObjective(); flushSubjective(); currentSection = 'B';
+        if (!uploadedSectionNames.includes('B')) uploadedSectionNames.push('B');
         continue;
       }
-      if (upper.includes('SECTION B') || upper === 'SUBJECTIVE' || upper === 'THEORY' || upper === 'ESSAY' || upper === 'SECTION C' || upper === 'SECTION D') {
-        currentSection = 'B';
+      if (upper.includes('SECTION C') || upper.includes('COMPREHENSION')) {
+        flushObjective(); flushSubjective(); currentSection = 'C';
+        if (!uploadedSectionNames.includes('C')) uploadedSectionNames.push('C');
         continue;
       }
-      // Skip obvious headings and decorative lines
-      if (upper.startsWith('SECTION') || upper.startsWith('PART ') || /^[-=_*]{3,}$/.test(line) || upper.startsWith('INSTRUCTIONS') || line.length < 5) continue;
+      if (upper.includes('SECTION D') || upper.includes('COMPOSITION') || upper.includes('SUMMARY')) {
+        flushObjective(); flushSubjective(); currentSection = 'D';
+        if (!uploadedSectionNames.includes('D')) uploadedSectionNames.push('D');
+        continue;
+      }
+      if (upper.startsWith('SECTION') || upper.startsWith('PART ') || /^[-=_*]{3,}$/.test(rawLine) || upper.startsWith('INSTRUCTIONS')) continue;
 
-      // Remove leading question numbers like "1.", "2)", "Q1.", etc.
-      const cleanedLine = line.replace(/^(\d+[\.\)\:]|\s*Q\d+[\.\)\:])\s*/i, '').trim();
-      if (!cleanedLine) continue;
+      const line = rawLine.replace(/^(\s*Q?\d+[\.\)\:]?)\s*/i, '').trim();
+      if (!line) continue;
 
-      const hasPipe = cleanedLine.includes('|');
-      const parts = hasPipe ? cleanedLine.split('|').map(p => p.trim()).filter(Boolean) : [cleanedLine];
+      // Objective options on separate lines: A. ..., B. ..., C. ..., D. ...
+      const optionMatch = line.match(/^([A-D])\s*[\.|\)|\:]\s*(.+)$/i);
+      if (optionMatch && currentSection === 'A') {
+        if (!pendingObjective) pendingObjective = { question: 'Imported objective question', options: [] };
+        pendingObjective.options.push(optionMatch[2].trim());
+        continue;
+      }
 
+      // Correct answer line
+      const answerMatch = line.match(/^(ANSWER|CORRECT ANSWER)\s*[:\-]\s*(.+)$/i);
+      if (answerMatch) {
+        const ansVal = answerMatch[2].trim();
+        if (currentSection === 'A' && pendingObjective) pendingObjective.correctAnswer = ansVal;
+        if ((currentSection === 'B' || currentSection === 'C' || currentSection === 'D') && pendingSubjective) pendingSubjective.answer = ansVal;
+        continue;
+      }
+
+      // Pipe format still supported
+      if (line.includes('|')) {
+        const parts = line.split('|').map(p => p.trim()).filter(Boolean);
+        if (currentSection === 'A' || (currentSection === 'auto' && parts.length >= 5)) {
+          flushObjective();
+          const q = parts[0];
+          const opts = parts.slice(1, 5);
+          const ans = parts[5] || parts[parts.length - 1] || opts[0];
+          newObj.push({ question: q, options: opts, correctAnswer: ans });
+        } else {
+          flushSubjective();
+          newSubj.push({ question: parts[0], answer: parts.slice(1).join(' ') || 'Accept valid NaCCA-aligned answer.', marks: 10 });
+        }
+        continue;
+      }
+
+      // Start of a new objective question
       if (currentSection === 'A') {
-        if (parts.length >= 6) {
-          // Full MCQ: question | A | B | C | D | correct
-          newObj.push({ question: parts[0], options: parts.slice(1, 5), correctAnswer: parts[5] });
-        } else if (parts.length === 5) {
-          // question | A | B | C | D (correct = first option)
-          newObj.push({ question: parts[0], options: parts.slice(1, 5), correctAnswer: parts[1] });
-        } else {
-          // Plain text question under Section A — add with empty options for teacher to fill
-          newObj.push({ question: parts[0], options: ['A. ___', 'B. ___', 'C. ___', 'D. ___'], correctAnswer: 'A. ___' });
-        }
-      } else if (currentSection === 'B') {
-        if (parts.length >= 2) {
-          newSubj.push({ question: parts[0], answer: parts.slice(1).join(' '), marks: 10 });
-        } else {
-          newSubj.push({ question: parts[0], answer: 'Accept valid NaCCA-aligned answer.', marks: 10 });
-        }
-      } else {
-        // Auto-detect: if has 5+ pipe parts, treat as objective; otherwise subjective
-        if (parts.length >= 5) {
-          newObj.push({ question: parts[0], options: parts.slice(1, 5), correctAnswer: parts[parts.length - 1] || parts[1] });
-        } else if (parts.length >= 2 && hasPipe) {
-          newSubj.push({ question: parts[0], answer: parts.slice(1).join(' '), marks: 10 });
-        } else if (cleanedLine.length > 15) {
-          newSubj.push({ question: cleanedLine, answer: 'Accept valid NaCCA-aligned answer.', marks: 10 });
-        }
+        if (pendingObjective && pendingObjective.options.length > 0) flushObjective();
+        pendingObjective = { question: line, options: [] };
+        continue;
+      }
+
+      // Start/append subjective question (B, C, or D)
+      if (currentSection === 'B' || currentSection === 'C' || currentSection === 'D') {
+        if (pendingSubjective) flushSubjective();
+        pendingSubjective = { question: line, answer: '' };
+        continue;
+      }
+
+      // Auto-detect fallback
+      if (line.length > 15) {
+        if (pendingSubjective) flushSubjective();
+        pendingSubjective = { question: line, answer: '' };
       }
     }
+
+    flushObjective();
+    flushSubjective();
 
     if (newObj.length > 0) setCustomObjectives(prev => [...prev, ...newObj]);
     if (newSubj.length > 0) setCustomSubjectives(prev => [...prev, ...newSubj]);
 
+    // Auto-create subjective section configs if document had Section C/D
+    if (uploadedSectionNames.length > 1) {
+      const newSections = uploadedSectionNames.map((label) => ({
+        label,
+        title: `Uploaded Section ${label}`,
+        questionCount: Math.ceil(newSubj.length / uploadedSectionNames.length),
+        marksPerQuestion: 10,
+        totalMarks: Math.ceil(newSubj.length / uploadedSectionNames.length) * 10,
+      }));
+      setSubjectiveSections(newSections);
+    }
+
     if (newObj.length + newSubj.length > 0) {
-      alert(`✅ Loaded ${newObj.length} objective (Section A) + ${newSubj.length} subjective (Section B) = ${newObj.length + newSubj.length} question(s) from document.`);
+      const sectionInfo = uploadedSectionNames.length > 0 ? ` (Sections: ${uploadedSectionNames.join(', ')})` : '';
+      alert(`✅ Loaded ${newObj.length} objective (Section A) + ${newSubj.length} subjective${sectionInfo} = ${newObj.length + newSubj.length} question(s) from document.`);
     } else {
-      alert('⚠️ No questions detected. Make sure your document has questions separated by new lines, and optionally use headings like "SECTION A" and "SECTION B".');
+      alert('⚠️ No questions detected. Use headings like SECTION A / SECTION B / SECTION C and put each question on its own line.');
     }
   };
 
@@ -312,7 +382,32 @@ export default function ExamGenerator({ user, specialMode }: Props) {
         {showMarkingScheme ? (
           <MarkingSchemeView exam={generatedExam} />
         ) : (
-          <ExamPreview exam={generatedExam} onUpdate={handleUpdateExam} />
+          <>
+            <ExamPreview exam={generatedExam} onUpdate={handleUpdateExam} />
+            {/* Auto-attach graph paper when Maths + graph/statistics/data topic selected */}
+            {generatedExam.subject === 'Mathematics' && 
+              (selectedTopics.some(t => /graph|statistic|data|pie|chart|coordinate/i.test(t)) || additionalTopics.toLowerCase().includes('graph')) && (
+              <div className="exam-paper" style={{ fontFamily: "'Times New Roman', Times, serif", pageBreakBefore: 'always' }}>
+                <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '6px', marginBottom: '8px' }}>
+                  <p style={{ fontSize: '14pt', fontWeight: 'bold', margin: 0 }}>GRAPH PAPER</p>
+                  <p style={{ fontSize: '9pt', color: '#555', margin: '2px 0' }}>Use this graph paper for plotting graphs and charts.</p>
+                </div>
+                <svg width="100%" height="700" viewBox="0 0 680 700">
+                  {Array.from({ length: 49 }).map((_, i) => (
+                    <line key={`h${i}`} x1="0" y1={i * 14} x2="680" y2={i * 14} stroke={i % 5 === 0 ? '#60a5fa' : '#93c5fd'} strokeWidth={i % 5 === 0 ? 1 : 0.5} />
+                  ))}
+                  {Array.from({ length: 49 }).map((_, i) => (
+                    <line key={`v${i}`} x1={i * 14} y1="0" x2={i * 14} y2="700" stroke={i % 5 === 0 ? '#60a5fa' : '#93c5fd'} strokeWidth={i % 5 === 0 ? 1 : 0.5} />
+                  ))}
+                  <line x1="340" y1="0" x2="340" y2="700" stroke="#1d4ed8" strokeWidth="2" />
+                  <line x1="0" y1="350" x2="680" y2="350" stroke="#1d4ed8" strokeWidth="2" />
+                  <text x="344" y="14" fontSize="10" fill="#1d4ed8" fontWeight="bold">y</text>
+                  <text x="668" y="346" fontSize="10" fill="#1d4ed8" fontWeight="bold">x</text>
+                  <text x="344" y="362" fontSize="9" fill="#1d4ed8">O</text>
+                </svg>
+              </div>
+            )}
+          </>
         )}
       </div>
     );

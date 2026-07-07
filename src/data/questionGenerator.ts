@@ -134,6 +134,46 @@ function matchTopicKeys<T>(source: Record<string, T>, selectedTopics: string[]):
   return Array.from(matched);
 }
 
+function makeFallbackMcq(subject: string, classLevel: ClassLevel | undefined, topic: string, variant: number, difficulty?: string): QItem {
+  const diff = difficulty || 'Medium';
+  const cl = classLevel || 'Basic 4';
+  const stemsEasy = [
+    `Which option is connected to the topic "${topic}"?`,
+    `Choose the correct idea about "${topic}".`,
+    `Which statement belongs to the topic "${topic}" in ${subject}?`,
+    `Select the best answer on "${topic}" for ${cl}.`,
+    `Which of these is studied under "${topic}"?`,
+  ];
+  const stemsMedium = [
+    `Which statement correctly describes "${topic}" in ${subject}?`,
+    `Choose the most appropriate answer about "${topic}" for ${cl}.`,
+    `Which option best matches the NaCCA strand "${topic}"?`,
+    `Which answer is most relevant to the topic "${topic}"?`,
+    `Which statement shows correct understanding of "${topic}"?`,
+  ];
+  const stemsHard = [
+    `Which option best reflects a NaCCA-aligned understanding of "${topic}" in ${cl}?`,
+    `Which statement provides the strongest curriculum-based interpretation of "${topic}"?`,
+    `Select the most accurate concept under the strand "${topic}" in ${subject}.`,
+    `Which answer best demonstrates deeper understanding of "${topic}"?`,
+    `Which option is the most conceptually correct for "${topic}" at ${cl}?`,
+  ];
+  const stems = diff === 'Easy' ? stemsEasy : diff === 'Hard' ? stemsHard : stemsMedium;
+  const q = stems[variant % stems.length];
+  const correct = `A correct NaCCA/GES idea about ${topic}`;
+  return {
+    q,
+    options: shuffle([
+      correct,
+      `An unrelated idea from another topic`,
+      `A statement that does not match ${cl}`,
+      `A wrong explanation of ${topic}`,
+    ]),
+    answer: correct,
+    type: 'mc',
+  };
+}
+
 // Generate dynamic NaCCA-aligned math questions appropriate to class level AND difficulty
 function generateMathVariations(classLevel: ClassLevel, topics: string[], difficulty?: string): QItem[] {
   const v: QItem[] = [];
@@ -1594,7 +1634,7 @@ function getQuestionsFromBank(subject: string, topics: string[], count: number, 
     fillIdx++;
     const topicIdx = fillIdx % Math.max(1, topics.length);
     const topic = topics[topicIdx] || subject;
-    
+
     if (subject === 'Mathematics') {
       // Generate unique arithmetic with varied operations
       const ops = ['+', '-', '×'];
@@ -1609,24 +1649,13 @@ function getQuestionsFromBank(subject: string, topics: string[], count: number, 
         selected.push({ q: qText, options: shuffle([String(ans), String(w1), String(w2), String(w3)]), answer: String(ans), type: 'mc' });
       }
     } else {
-      // Pull from NACCA_TEMPLATES for this subject — cycle through all available
-      const subjectTemplates = NACCA_TEMPLATES[subject] || {};
-      const allTemplateQs = Object.values(subjectTemplates).flat();
-      if (allTemplateQs.length > 0) {
-        const tq = allTemplateQs[(fillIdx - 1) % allTemplateQs.length];
-        const qText = tq.q + ` [${classLevel}]`;
-        if (!selected.find(s => s.q === qText)) {
-          selected.push({ q: qText, options: [...tq.options], answer: tq.answer, type: 'mc' });
-        }
-      } else {
-        // Last resort: generate unique numbered question
-        const qText = `Question ${selected.length + 1}. Which statement about "${topic}" (${classLevel}) is TRUE?`;
-        if (!selected.find(s => s.q === qText)) {
-          selected.push({ q: qText, options: ['Statement A is correct', 'Statement B is correct', 'Statement C is correct', 'Statement D is correct'], answer: 'Statement A is correct', type: 'mc' });
-        }
+      const fallback = makeFallbackMcq(subject, classLevel, topic, fillIdx, difficulty);
+      const qText = `${fallback.q} (${topic}) #${fillIdx}`;
+      if (!selected.find(s => s.q === qText)) {
+        selected.push({ q: qText, options: [...fallback.options], answer: fallback.answer, type: 'mc' });
       }
     }
-    if (fillIdx > count * 3) break; // safety with higher limit
+    if (fillIdx > count * 12) break;
   }
   
   return selected.slice(0, count).map((item, idx) => ({
