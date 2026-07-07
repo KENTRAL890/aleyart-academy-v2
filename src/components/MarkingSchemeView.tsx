@@ -84,7 +84,7 @@ export default function MarkingSchemeView({ exam }: Props) {
                 <div key={q.id} style={{ marginBottom: '20px', borderBottom: '1px solid #ddd', paddingBottom: '16px', breakInside: 'avoid' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                     <p style={{ fontWeight: 'bold', fontSize: '11pt', margin: 0 }}>
-                      Question {q.questionNumber} {q.isCompulsory ? '⭐ (COMPULSORY)' : ''} {q.isPractical ? '🔬 (PRACTICAL)' : ''}
+                      Q{q.questionNumber} {q.isCompulsory ? '⭐ (COMPULSORY)' : ''} {q.isPractical ? '🔬 (PRACTICAL)' : ''}
                     </p>
                     <span style={{ fontSize: '10pt', background: '#e8e8e8', padding: '2px 8px', borderRadius: '4px' }}>
                       [{q.marks} marks]
@@ -137,7 +137,7 @@ export default function MarkingSchemeView({ exam }: Props) {
                   {q.subQuestions && q.subQuestions.map(sq => (
                     <div key={sq.id} style={{ marginLeft: '20px', marginBottom: '10px' }}>
                       <p style={{ fontWeight: '600', fontSize: '10pt', margin: '0 0 4px 0' }}>
-                        ({sq.label}) <MathFormattedText text={sq.question} /> <span style={{ color: '#888', fontSize: '9pt' }}>[{sq.marks} marks]</span>
+                        {sq.label}. <MathFormattedText text={sq.question} /> <span style={{ color: '#888', fontSize: '9pt' }}>[{sq.marks} marks]</span>
                       </p>
                       <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px', padding: '8px' }}>
                         <p style={{ fontSize: '9pt', fontWeight: 'bold', color: '#166534', margin: '0 0 4px 0' }}>✅ ANSWER:</p>

@@ -3,8 +3,12 @@ import type { Question, ExamSection, ExamPaper, MarkingSchemeItem, ClassLevel, S
 let questionCounter = 0;
 
 // Global set that tracks ALL questions ever generated in this session
-// Prevents any question from repeating across ANY subject, class, or generation
+// Prevents any exact question text from repeating across ANY subject, class, or generation
 const globalUsedQuestions = new Set<string>();
+
+function globalKey(_classLevel: string, questionText: string): string {
+  return questionText.trim().toLowerCase();
+}
 
 function uid(): string {
   return `q_${Date.now()}_${++questionCounter}_${Math.random().toString(36).substr(2,6)}`;
@@ -96,6 +100,40 @@ const JHS: ClassLevel[] = ['Basic 7', 'Basic 8', 'Basic 9'];
 
 function isLevel(cl: ClassLevel, levels: ClassLevel[]): boolean { return levels.includes(cl); }
 
+const normalizeTopic = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const topicHas = (topics: string[], ...needles: string[]) => {
+  const normalized = topics.map(normalizeTopic);
+  return normalized.some(t => needles.some(n => t.includes(normalizeTopic(n))));
+};
+
+function matchTopicKeys<T>(source: Record<string, T>, selectedTopics: string[]): string[] {
+  const keys = Object.keys(source);
+  const matched = new Set<string>();
+  for (const topic of selectedTopics) {
+    const nt = normalizeTopic(topic);
+    for (const key of keys) {
+      const nk = normalizeTopic(key);
+      if (nk === nt || nk.includes(nt) || nt.includes(nk)) {
+        matched.add(key);
+      }
+    }
+    // Subject-specific aliases
+    if (nt.includes('graph')) matched.add('graph');
+    if (nt.includes('pie')) matched.add('pie_chart');
+    if (nt.includes('set')) matched.add('sets');
+    if (nt.includes('circumference') || nt.includes('circle')) matched.add('circumference');
+    if (nt.includes('construct')) matched.add('construction');
+    if (nt.includes('literature')) matched.add('literature');
+    if (nt.includes('grammar')) matched.add('grammar');
+    if (nt.includes('comprehension')) matched.add('comprehension');
+    if (nt.includes('summary')) matched.add('summary');
+    if (nt.includes('composition')) matched.add('composition');
+    if (nt.includes('practical')) matched.add('practical');
+    if (nt.includes('default')) matched.add('default');
+  }
+  return Array.from(matched);
+}
+
 // Generate dynamic NaCCA-aligned math questions appropriate to class level AND difficulty
 function generateMathVariations(classLevel: ClassLevel, topics: string[], difficulty?: string): QItem[] {
   const v: QItem[] = [];
@@ -109,17 +147,31 @@ function generateMathVariations(classLevel: ClassLevel, topics: string[], diffic
   // Difficulty: Easy=small numbers, Medium=moderate, Hard=larger/complex
 
   if (isLevel(classLevel, LOWER_PRIMARY)) {
-    // Basic 1-3: NaCCA SBC — difficulty scales number ranges
+    // Basic 1-3: only selected/additional topics
     const maxAdd = diff === 'Easy' ? 10 : diff === 'Hard' ? 50 : 20;
     const maxSub = diff === 'Easy' ? 15 : diff === 'Hard' ? 50 : 30;
-    for (let i = 0; i < 8; i++) { const a = r(1, maxAdd); const b = r(1, maxAdd); v.push({ q: `${a} + ${b} = ___`, options: w(a+b, 5), answer: String(a+b), type: 'mc' }); }
-    for (let i = 0; i < 5; i++) { const a = r(10, maxSub); const b = r(1, a-1); v.push({ q: `${a} - ${b} = ___`, options: w(a-b, 4), answer: String(a-b), type: 'mc' }); }
-    if (topics.some(t => t.includes('Multipl'))) { for (let i = 0; i < 5; i++) { const a = r(2, 5); const b = r(2, 5); v.push({ q: `${a} × ${b} = ___`, options: w(a*b, 5), answer: String(a*b), type: 'mc' }); } }
-    v.push({ q: 'How many sides does a rectangle have?', options: ['3', '4', '5', '6'], answer: '4', type: 'mc' });
-    v.push({ q: 'Which shape has 3 sides?', options: ['Square', 'Triangle', 'Circle', 'Rectangle'], answer: 'Triangle', type: 'mc' });
-    v.push({ q: 'Count: 5, 10, 15, ___', options: ['16', '18', '20', '25'], answer: '20', type: 'mc' });
-    v.push({ q: 'What is the value of the digit 3 in 35?', options: ['3', '30', '35', '5'], answer: '30', type: 'mc' });
-    v.push({ q: 'Kofi has GH₵5. He buys a pen for GH₵2. How much change does he get?', options: ['GH₵1', 'GH₵2', 'GH₵3', 'GH₵7'], answer: 'GH₵3', type: 'mc' });
+    if (topicHas(topics, 'addition')) {
+      for (let i = 0; i < 8; i++) { const a = r(1, maxAdd); const b = r(1, maxAdd); v.push({ q: `${a} + ${b} = ___`, options: w(a+b, 5), answer: String(a+b), type: 'mc' }); }
+    }
+    if (topicHas(topics, 'subtraction')) {
+      for (let i = 0; i < 5; i++) { const a = r(10, maxSub); const b = r(1, a-1); v.push({ q: `${a} - ${b} = ___`, options: w(a-b, 4), answer: String(a-b), type: 'mc' }); }
+    }
+    if (topicHas(topics, 'multiplication')) {
+      for (let i = 0; i < 5; i++) { const a = r(2, 5); const b = r(2, 5); v.push({ q: `${a} × ${b} = ___`, options: w(a*b, 5), answer: String(a*b), type: 'mc' }); }
+    }
+    if (topicHas(topics, 'shape', 'geometry')) {
+      v.push({ q: 'How many sides does a rectangle have?', options: ['3', '4', '5', '6'], answer: '4', type: 'mc' });
+      v.push({ q: 'Which shape has 3 sides?', options: ['Square', 'Triangle', 'Circle', 'Rectangle'], answer: 'Triangle', type: 'mc' });
+    }
+    if (topicHas(topics, 'counting', 'pattern')) {
+      v.push({ q: 'Count: 5, 10, 15, ___', options: ['16', '18', '20', '25'], answer: '20', type: 'mc' });
+    }
+    if (topicHas(topics, 'number', 'place value')) {
+      v.push({ q: 'What is the value of the digit 3 in 35?', options: ['3', '30', '35', '5'], answer: '30', type: 'mc' });
+    }
+    if (topicHas(topics, 'money')) {
+      v.push({ q: 'Kofi has GH₵5. He buys a pen for GH₵2. How much change does he get?', options: ['GH₵1', 'GH₵2', 'GH₵3', 'GH₵7'], answer: 'GH₵3', type: 'mc' });
+    }
   }
 
   if (isLevel(classLevel, UPPER_PRIMARY)) {
@@ -219,109 +271,122 @@ function generateLevelQuestions(subject: string, classLevel: ClassLevel, topics:
 
   if (subject === 'Science') {
     if (isLower) {
-      v.push({ q: 'Which of these is a source of light?', options: ['Stone', 'Sun', 'Soil', 'Water'], answer: 'Sun', type: 'mc' });
-      v.push({ q: 'We use our ___ to see.', options: ['Ears', 'Nose', 'Eyes', 'Mouth'], answer: 'Eyes', type: 'mc' });
-      v.push({ q: 'Which of these is NOT a living thing?', options: ['Dog', 'Tree', 'Stone', 'Fish'], answer: 'Stone', type: 'mc' });
-      v.push({ q: 'Rain comes from ___', options: ['The ground', 'Clouds', 'Trees', 'Rivers'], answer: 'Clouds', type: 'mc' });
-      v.push({ q: 'Plants need ___ to grow.', options: ['Stones', 'Water and sunlight', 'Darkness', 'Sand only'], answer: 'Water and sunlight', type: 'mc' });
+      if (topicHas(topics, 'light', 'energy')) v.push({ q: 'Which of these is a source of light?', options: ['Stone', 'Sun', 'Soil', 'Water'], answer: 'Sun', type: 'mc' });
+      if (topicHas(topics, 'our body', 'body', 'health')) v.push({ q: 'We use our ___ to see.', options: ['Ears', 'Nose', 'Eyes', 'Mouth'], answer: 'Eyes', type: 'mc' });
+      if (topicHas(topics, 'living things', 'animals', 'plants')) v.push({ q: 'Which of these is NOT a living thing?', options: ['Dog', 'Tree', 'Stone', 'Fish'], answer: 'Stone', type: 'mc' });
+      if (topicHas(topics, 'weather', 'water')) v.push({ q: 'Rain comes from ___', options: ['The ground', 'Clouds', 'Trees', 'Rivers'], answer: 'Clouds', type: 'mc' });
+      if (topicHas(topics, 'plants')) v.push({ q: 'Plants need ___ to grow.', options: ['Stones', 'Water and sunlight', 'Darkness', 'Sand only'], answer: 'Water and sunlight', type: 'mc' });
     }
     if (isUpper) {
-      v.push({ q: 'The process of changing liquid to gas is called ___', options: ['Condensation', 'Freezing', 'Evaporation', 'Melting'], answer: 'Evaporation', type: 'mc' });
-      v.push({ q: 'Soil that is good for farming is called ___ soil.', options: ['Sandy', 'Clay', 'Loamy', 'Gravel'], answer: 'Loamy', type: 'mc' });
-      v.push({ q: 'The SI unit of force is ___', options: ['Joule', 'Newton', 'Watt', 'Pascal'], answer: 'Newton', type: 'mc' });
-      v.push({ q: 'A circuit needs a ___ to be complete.', options: ['Switch', 'Magnet', 'Ruler', 'Pencil'], answer: 'Switch', type: 'mc' });
-      v.push({ q: 'The part of a plant that absorbs water from the soil is the ___', options: ['Leaf', 'Stem', 'Root', 'Flower'], answer: 'Root', type: 'mc' });
-      v.push({ q: 'A simple electric circuit consists of a cell, wire and ___', options: ['Magnet', 'Bulb', 'Ruler', 'Book'], answer: 'Bulb', type: 'mc' });
-      v.push({ q: 'The part of the human body that pumps blood is the ___', options: ['Liver', 'Kidney', 'Heart', 'Lung'], answer: 'Heart', type: 'mc' });
-      v.push({ q: 'In the water cycle, water vapour rises and forms ___', options: ['Rivers', 'Oceans', 'Clouds', 'Soil'], answer: 'Clouds', type: 'mc' });
-      v.push({ q: 'A lever is an example of a simple ___', options: ['Circuit', 'Machine', 'Mixture', 'Compound'], answer: 'Machine', type: 'mc' });
+      if (topicHas(topics, 'water', 'matter')) v.push({ q: 'The process of changing liquid to gas is called ___', options: ['Condensation', 'Freezing', 'Evaporation', 'Melting'], answer: 'Evaporation', type: 'mc' });
+      if (topicHas(topics, 'soil')) v.push({ q: 'Soil that is good for farming is called ___ soil.', options: ['Sandy', 'Clay', 'Loamy', 'Gravel'], answer: 'Loamy', type: 'mc' });
+      if (topicHas(topics, 'forces')) v.push({ q: 'The SI unit of force is ___', options: ['Joule', 'Newton', 'Watt', 'Pascal'], answer: 'Newton', type: 'mc' });
+      if (topicHas(topics, 'electricity')) {
+        v.push({ q: 'A circuit needs a ___ to be complete.', options: ['Switch', 'Magnet', 'Ruler', 'Pencil'], answer: 'Switch', type: 'mc' });
+        v.push({ q: 'A simple electric circuit consists of a cell, wire and ___', options: ['Magnet', 'Bulb', 'Ruler', 'Book'], answer: 'Bulb', type: 'mc' });
+      }
+      if (topicHas(topics, 'plants')) v.push({ q: 'The part of a plant that absorbs water from the soil is the ___', options: ['Leaf', 'Stem', 'Root', 'Flower'], answer: 'Root', type: 'mc' });
+      if (topicHas(topics, 'human body', 'health', 'body')) v.push({ q: 'The part of the human body that pumps blood is the ___', options: ['Liver', 'Kidney', 'Heart', 'Lung'], answer: 'Heart', type: 'mc' });
+      if (topicHas(topics, 'weather', 'water')) v.push({ q: 'In the water cycle, water vapour rises and forms ___', options: ['Rivers', 'Oceans', 'Clouds', 'Soil'], answer: 'Clouds', type: 'mc' });
+      if (topicHas(topics, 'machines')) v.push({ q: 'A lever is an example of a simple ___', options: ['Circuit', 'Machine', 'Mixture', 'Compound'], answer: 'Machine', type: 'mc' });
     }
     if (isJhs) {
-      v.push({ q: 'Acids turn blue litmus paper ___', options: ['Blue', 'Green', 'Red', 'Yellow'], answer: 'Red', type: 'mc' });
-      v.push({ q: 'The chemical symbol for water is ___', options: ['H₂O', 'CO₂', 'NaCl', 'O₂'], answer: 'H₂O', type: 'mc' });
-      v.push({ q: 'Photosynthesis takes place in the ___', options: ['Root', 'Stem', 'Leaf', 'Flower'], answer: 'Leaf', type: 'mc' });
-      v.push({ q: 'An element is made up of only one type of ___', options: ['Compound', 'Mixture', 'Atom', 'Molecule'], answer: 'Atom', type: 'mc' });
-      v.push({ q: 'In an electric circuit, current is measured in ___', options: ['Volts', 'Ohms', 'Amperes', 'Watts'], answer: 'Amperes', type: 'mc' });
+      if (topicHas(topics, 'chemical', 'diversity of matter', 'interactions of matter')) {
+        v.push({ q: 'Acids turn blue litmus paper ___', options: ['Blue', 'Green', 'Red', 'Yellow'], answer: 'Red', type: 'mc' });
+        v.push({ q: 'The chemical symbol for water is ___', options: ['H₂O', 'CO₂', 'NaCl', 'O₂'], answer: 'H₂O', type: 'mc' });
+      }
+      if (topicHas(topics, 'systems', 'plants')) v.push({ q: 'Photosynthesis takes place in the ___', options: ['Root', 'Stem', 'Leaf', 'Flower'], answer: 'Leaf', type: 'mc' });
+      if (topicHas(topics, 'diversity of matter')) v.push({ q: 'An element is made up of only one type of ___', options: ['Compound', 'Mixture', 'Atom', 'Molecule'], answer: 'Atom', type: 'mc' });
+      if (topicHas(topics, 'electricity', 'systems')) v.push({ q: 'In an electric circuit, current is measured in ___', options: ['Volts', 'Ohms', 'Amperes', 'Watts'], answer: 'Amperes', type: 'mc' });
     }
   }
 
   if (subject === 'Social Studies') {
     if (isLower) {
-      v.push({ q: 'The capital of Ghana is ___', options: ['Kumasi', 'Tamale', 'Accra', 'Cape Coast'], answer: 'Accra', type: 'mc' });
-      v.push({ q: 'Who is the head of your family?', options: ['Teacher', 'Father or Mother', 'Friend', 'Doctor'], answer: 'Father or Mother', type: 'mc' });
-      v.push({ q: 'We should ___ our environment.', options: ['Destroy', 'Pollute', 'Protect', 'Ignore'], answer: 'Protect', type: 'mc' });
+      if (topicHas(topics, 'community', 'government', 'history of ghana')) v.push({ q: 'The capital of Ghana is ___', options: ['Kumasi', 'Tamale', 'Accra', 'Cape Coast'], answer: 'Accra', type: 'mc' });
+      if (topicHas(topics, 'family')) v.push({ q: 'Who is the head of your family?', options: ['Teacher', 'Father or Mother', 'Friend', 'Doctor'], answer: 'Father or Mother', type: 'mc' });
+      if (topicHas(topics, 'environment', 'our environment')) v.push({ q: 'We should ___ our environment.', options: ['Destroy', 'Pollute', 'Protect', 'Ignore'], answer: 'Protect', type: 'mc' });
     }
     if (isUpper || isJhs) {
-      v.push({ q: 'Ghana gained independence on 6th March ___', options: ['1945', '1957', '1960', '1966'], answer: '1957', type: 'mc' });
-      v.push({ q: 'The first President of Ghana was ___', options: ['J.B. Danquah', 'Kwame Nkrumah', 'K.A. Busia', 'J.J. Rawlings'], answer: 'Kwame Nkrumah', type: 'mc' });
-      v.push({ q: 'The national flag of Ghana has ___ stars.', options: ['1', '2', '3', '5'], answer: '1', type: 'mc' });
+      if (topicHas(topics, 'history of ghana', 'ghana history', 'independence')) {
+        v.push({ q: 'Ghana gained independence on 6th March ___', options: ['1945', '1957', '1960', '1966'], answer: '1957', type: 'mc' });
+        v.push({ q: 'The first President of Ghana was ___', options: ['J.B. Danquah', 'Kwame Nkrumah', 'K.A. Busia', 'J.J. Rawlings'], answer: 'Kwame Nkrumah', type: 'mc' });
+      }
+      if (topicHas(topics, 'national symbols')) v.push({ q: 'The national flag of Ghana has ___ stars.', options: ['1', '2', '3', '5'], answer: '1', type: 'mc' });
     }
     if (isJhs) {
-      v.push({ q: 'ECOWAS stands for ___', options: ['Economic Community of West African States', 'East Central Organisation of West African States', 'European Community of Western States', 'Economic Council of World States'], answer: 'Economic Community of West African States', type: 'mc' });
-      v.push({ q: 'The Parliament of Ghana is located in ___', options: ['Kumasi', 'Accra', 'Tamale', 'Takoradi'], answer: 'Accra', type: 'mc' });
+      if (topicHas(topics, 'international relations')) v.push({ q: 'ECOWAS stands for ___', options: ['Economic Community of West African States', 'East Central Organisation of West African States', 'European Community of Western States', 'Economic Council of World States'], answer: 'Economic Community of West African States', type: 'mc' });
+      if (topicHas(topics, 'governance')) v.push({ q: 'The Parliament of Ghana is located in ___', options: ['Kumasi', 'Accra', 'Tamale', 'Takoradi'], answer: 'Accra', type: 'mc' });
     }
   }
 
   if (subject === 'Computing') {
     if (isLower) {
-      v.push({ q: 'Which part of the computer do you type with?', options: ['Mouse', 'Monitor', 'Keyboard', 'Speaker'], answer: 'Keyboard', type: 'mc' });
-      v.push({ q: 'The ___ shows pictures and text on the computer.', options: ['Keyboard', 'Mouse', 'Monitor', 'CPU'], answer: 'Monitor', type: 'mc' });
+      if (topicHas(topics, 'keyboard', 'parts of a computer')) v.push({ q: 'Which part of the computer do you type with?', options: ['Mouse', 'Monitor', 'Keyboard', 'Speaker'], answer: 'Keyboard', type: 'mc' });
+      if (topicHas(topics, 'parts of a computer', 'uses of computer')) v.push({ q: 'The ___ shows pictures and text on the computer.', options: ['Keyboard', 'Mouse', 'Monitor', 'CPU'], answer: 'Monitor', type: 'mc' });
     }
     if (isUpper) {
-      v.push({ q: 'Microsoft Word is used for ___', options: ['Drawing', 'Typing documents', 'Playing music', 'Browsing'], answer: 'Typing documents', type: 'mc' });
-      v.push({ q: 'Which key do you press to make a capital letter?', options: ['Enter', 'Shift', 'Space', 'Tab'], answer: 'Shift', type: 'mc' });
-      v.push({ q: 'A flowchart uses a ___ shape for decisions.', options: ['Rectangle', 'Oval', 'Diamond', 'Circle'], answer: 'Diamond', type: 'mc' });
-      v.push({ q: 'An oval shape in a flowchart represents ___', options: ['Process', 'Decision', 'Start/Stop', 'Input'], answer: 'Start/Stop', type: 'mc' });
-      v.push({ q: 'A spreadsheet is organized into rows and ___', options: ['Pages', 'Columns', 'Lines', 'Sheets'], answer: 'Columns', type: 'mc' });
-      v.push({ q: 'The Internet is a network of ___', options: ['Phones only', 'Computers worldwide', 'Schools only', 'Radios'], answer: 'Computers worldwide', type: 'mc' });
-      v.push({ q: 'Ctrl + S is used to ___ a document.', options: ['Print', 'Save', 'Delete', 'Open'], answer: 'Save', type: 'mc' });
-      v.push({ q: 'A computer program is a set of ___', options: ['Pictures', 'Instructions', 'Videos', 'Sounds'], answer: 'Instructions', type: 'mc' });
+      if (topicHas(topics, 'word processing')) v.push({ q: 'Microsoft Word is used for ___', options: ['Drawing', 'Typing documents', 'Playing music', 'Browsing'], answer: 'Typing documents', type: 'mc' });
+      if (topicHas(topics, 'keyboard skills')) v.push({ q: 'Which key do you press to make a capital letter?', options: ['Enter', 'Shift', 'Space', 'Tab'], answer: 'Shift', type: 'mc' });
+      if (topicHas(topics, 'flowcharts', 'programming basics', 'algorithms')) {
+        v.push({ q: 'A flowchart uses a ___ shape for decisions.', options: ['Rectangle', 'Oval', 'Diamond', 'Circle'], answer: 'Diamond', type: 'mc' });
+        v.push({ q: 'An oval shape in a flowchart represents ___', options: ['Process', 'Decision', 'Start/Stop', 'Input'], answer: 'Start/Stop', type: 'mc' });
+      }
+      if (topicHas(topics, 'spreadsheets')) v.push({ q: 'A spreadsheet is organized into rows and ___', options: ['Pages', 'Columns', 'Lines', 'Sheets'], answer: 'Columns', type: 'mc' });
+      if (topicHas(topics, 'internet', 'internet basics', 'internet and web')) v.push({ q: 'The Internet is a network of ___', options: ['Phones only', 'Computers worldwide', 'Schools only', 'Radios'], answer: 'Computers worldwide', type: 'mc' });
+      if (topicHas(topics, 'word processing')) v.push({ q: 'Ctrl + S is used to ___ a document.', options: ['Print', 'Save', 'Delete', 'Open'], answer: 'Save', type: 'mc' });
+      if (topicHas(topics, 'programming basics')) v.push({ q: 'A computer program is a set of ___', options: ['Pictures', 'Instructions', 'Videos', 'Sounds'], answer: 'Instructions', type: 'mc' });
     }
     if (isJhs) {
-      v.push({ q: 'HTML is used for creating ___', options: ['Spreadsheets', 'Databases', 'Web pages', 'Presentations'], answer: 'Web pages', type: 'mc' });
-      v.push({ q: 'Which of the following is an example of system software?', options: ['Microsoft Word', 'Google Chrome', 'Windows Operating System', 'Adobe Photoshop'], answer: 'Windows Operating System', type: 'mc' });
-      v.push({ q: 'A computer virus is a type of ___', options: ['Hardware', 'Malware', 'Software update', 'Network'], answer: 'Malware', type: 'mc' });
-      v.push({ q: 'In programming, a loop is used to ___', options: ['Delete files', 'Repeat instructions', 'Print documents', 'Connect to internet'], answer: 'Repeat instructions', type: 'mc' });
+      if (topicHas(topics, 'web design', 'internet and web')) v.push({ q: 'HTML is used for creating ___', options: ['Spreadsheets', 'Databases', 'Web pages', 'Presentations'], answer: 'Web pages', type: 'mc' });
+      if (topicHas(topics, 'computer systems', 'computer software')) v.push({ q: 'Which of the following is an example of system software?', options: ['Microsoft Word', 'Google Chrome', 'Windows Operating System', 'Adobe Photoshop'], answer: 'Windows Operating System', type: 'mc' });
+      if (topicHas(topics, 'cyber security')) v.push({ q: 'A computer virus is a type of ___', options: ['Hardware', 'Malware', 'Software update', 'Network'], answer: 'Malware', type: 'mc' });
+      if (topicHas(topics, 'programming', 'algorithms')) v.push({ q: 'In programming, a loop is used to ___', options: ['Delete files', 'Repeat instructions', 'Print documents', 'Connect to internet'], answer: 'Repeat instructions', type: 'mc' });
     }
   }
 
   if (subject === 'RME') {
     if (isLower) {
-      v.push({ q: 'Who created the world according to Christians?', options: ['Angels', 'Humans', 'God', 'Animals'], answer: 'God', type: 'mc' });
-      v.push({ q: 'We should show ___ to our parents.', options: ['Disrespect', 'Respect', 'Hatred', 'Anger'], answer: 'Respect', type: 'mc' });
+      if (topicHas(topics, 'god', 'prayer')) v.push({ q: 'Who created the world according to Christians?', options: ['Angels', 'Humans', 'God', 'Animals'], answer: 'God', type: 'mc' });
+      if (topicHas(topics, 'moral', 'good behaviour', 'family values')) v.push({ q: 'We should show ___ to our parents.', options: ['Disrespect', 'Respect', 'Hatred', 'Anger'], answer: 'Respect', type: 'mc' });
     }
     if (isUpper || isJhs) {
-      v.push({ q: 'The holy book of Muslims is the ___', options: ['Bible', 'Torah', 'Quran', 'Vedas'], answer: 'Quran', type: 'mc' });
-      v.push({ q: 'Easter celebrates the ___ of Jesus Christ.', options: ['Birth', 'Death', 'Resurrection', 'Baptism'], answer: 'Resurrection', type: 'mc' });
+      if (topicHas(topics, 'religious teachings', 'religious leaders')) v.push({ q: 'The holy book of Muslims is the ___', options: ['Bible', 'Torah', 'Quran', 'Vedas'], answer: 'Quran', type: 'mc' });
+      if (topicHas(topics, 'religious festivals')) v.push({ q: 'Easter celebrates the ___ of Jesus Christ.', options: ['Birth', 'Death', 'Resurrection', 'Baptism'], answer: 'Resurrection', type: 'mc' });
     }
   }
 
   if (subject === 'Creative Arts') {
-    v.push({ q: 'Red, blue and yellow are called ___ colours.', options: ['Secondary', 'Tertiary', 'Primary', 'Neutral'], answer: 'Primary', type: 'mc' });
-    v.push({ q: 'Mixing red and blue gives ___', options: ['Green', 'Orange', 'Purple', 'Brown'], answer: 'Purple', type: 'mc' });
-    if (isUpper) {
-      v.push({ q: 'Mixing yellow and blue gives ___', options: ['Red', 'Green', 'Purple', 'Orange'], answer: 'Green', type: 'mc' });
-      v.push({ q: 'Secondary colours are obtained by mixing two ___ colours.', options: ['Tertiary', 'Primary', 'Neutral', 'Cool'], answer: 'Primary', type: 'mc' });
-      v.push({ q: 'A colour wheel shows the relationship between ___', options: ['Numbers', 'Colours', 'Shapes', 'Lines'], answer: 'Colours', type: 'mc' });
-      v.push({ q: 'In art, the element that refers to the lightness or darkness of a colour is ___', options: ['Hue', 'Value', 'Texture', 'Line'], answer: 'Value', type: 'mc' });
-      v.push({ q: 'Weaving involves interlacing ___ threads.', options: ['Warp and weft', 'Top and bottom', 'Left and right', 'Long and short'], answer: 'Warp and weft', type: 'mc' });
-      v.push({ q: 'Kente cloth originates from the ___ people of Ghana.', options: ['Ga', 'Ewe', 'Ashanti', 'Dagomba'], answer: 'Ashanti', type: 'mc' });
-      v.push({ q: 'Clay is the main material used in ___', options: ['Weaving', 'Carving', 'Pottery/Ceramics', 'Painting'], answer: 'Pottery/Ceramics', type: 'mc' });
-      v.push({ q: 'A still life drawing involves drawing ___', options: ['Moving animals', 'Stationary objects', 'Landscapes only', 'People only'], answer: 'Stationary objects', type: 'mc' });
+    if (topicHas(topics, 'colour', 'painting')) {
+      v.push({ q: 'Red, blue and yellow are called ___ colours.', options: ['Secondary', 'Tertiary', 'Primary', 'Neutral'], answer: 'Primary', type: 'mc' });
+      v.push({ q: 'Mixing red and blue gives ___', options: ['Green', 'Orange', 'Purple', 'Brown'], answer: 'Purple', type: 'mc' });
     }
-    if (isJhs) {
-      v.push({ q: 'Kente cloth is associated with the ___ people of Ghana.', options: ['Ga', 'Ewe', 'Ashanti', 'Dagomba'], answer: 'Ashanti', type: 'mc' });
+    if (isUpper) {
+      if (topicHas(topics, 'colour', 'painting')) {
+        v.push({ q: 'Mixing yellow and blue gives ___', options: ['Red', 'Green', 'Purple', 'Orange'], answer: 'Green', type: 'mc' });
+        v.push({ q: 'Secondary colours are obtained by mixing two ___ colours.', options: ['Tertiary', 'Primary', 'Neutral', 'Cool'], answer: 'Primary', type: 'mc' });
+        v.push({ q: 'A colour wheel shows the relationship between ___', options: ['Numbers', 'Colours', 'Shapes', 'Lines'], answer: 'Colours', type: 'mc' });
+        v.push({ q: 'In art, the element that refers to the lightness or darkness of a colour is ___', options: ['Hue', 'Value', 'Texture', 'Line'], answer: 'Value', type: 'mc' });
+      }
+      if (topicHas(topics, 'textiles', 'patterns')) {
+        v.push({ q: 'Weaving involves interlacing ___ threads.', options: ['Warp and weft', 'Top and bottom', 'Left and right', 'Long and short'], answer: 'Warp and weft', type: 'mc' });
+        v.push({ q: 'Kente cloth originates from the ___ people of Ghana.', options: ['Ga', 'Ewe', 'Ashanti', 'Dagomba'], answer: 'Ashanti', type: 'mc' });
+      }
+      if (topicHas(topics, 'ceramics')) v.push({ q: 'Clay is the main material used in ___', options: ['Weaving', 'Carving', 'Pottery/Ceramics', 'Painting'], answer: 'Pottery/Ceramics', type: 'mc' });
+      if (topicHas(topics, 'drawing')) v.push({ q: 'A still life drawing involves drawing ___', options: ['Moving animals', 'Stationary objects', 'Landscapes only', 'People only'], answer: 'Stationary objects', type: 'mc' });
+    }
+    if (isJhs && topicHas(topics, 'visual art', 'art appreciation', 'design')) {
       v.push({ q: 'The Adinkra symbol "Sankofa" means ___', options: ['Bravery', 'Go back and get it', 'Unity', 'Strength'], answer: 'Go back and get it', type: 'mc' });
     }
   }
 
   if (subject === 'Career Technology') {
-    if (isLower || isUpper) {
+    if ((isLower || isUpper) && topicHas(topics, 'tools', 'materials', 'safety')) {
       v.push({ q: 'A screwdriver is used for ___', options: ['Cutting wood', 'Driving screws', 'Measuring', 'Painting'], answer: 'Driving screws', type: 'mc' });
     }
     if (isJhs) {
-      v.push({ q: 'An entrepreneur is a person who ___', options: ['Works for government', 'Starts and manages a business', 'Teaches in school', 'Drives a taxi'], answer: 'Starts and manages a business', type: 'mc' });
-      v.push({ q: 'The first step in the design process is ___', options: ['Testing', 'Making', 'Identifying the problem', 'Evaluating'], answer: 'Identifying the problem', type: 'mc' });
+      if (topicHas(topics, 'entrepreneurship')) v.push({ q: 'An entrepreneur is a person who ___', options: ['Works for government', 'Starts and manages a business', 'Teaches in school', 'Drives a taxi'], answer: 'Starts and manages a business', type: 'mc' });
+      if (topicHas(topics, 'design and technology', 'problem solving')) v.push({ q: 'The first step in the design process is ___', options: ['Testing', 'Making', 'Identifying the problem', 'Evaluating'], answer: 'Identifying the problem', type: 'mc' });
     }
   }
 
@@ -1280,39 +1345,37 @@ const SUBJECTIVE_BANKS: Record<string, Record<string, { q: string; answer: strin
 function getQuestionsFromBank(subject: string, topics: string[], count: number, classLevel?: ClassLevel, difficulty?: string): Question[] {
   const subjectBank = QUESTION_BANKS[subject] || {};
   let allQuestions: { q: string; options?: string[]; answer: string; type: string }[] = [];
-  
-  // Collect questions from selected topics ONLY
-  for (const topic of topics) {
-    const topicQuestions = subjectBank[topic] || [];
+  const matchedKeys = matchTopicKeys(subjectBank, topics);
+
+  // Collect questions ONLY from selected/additional topics mapped to bank keys
+  for (const key of matchedKeys) {
+    const topicQuestions = subjectBank[key] || [];
     allQuestions.push(...topicQuestions);
   }
   
-  // Add from other topics in the subject if needed
-  if (allQuestions.length < count) {
-    for (const [, qs] of Object.entries(subjectBank)) {
-      for (const q of qs) {
-        if (!allQuestions.find(aq => aq.q === q.q)) {
-          allQuestions.push(q);
-        }
-      }
-    }
-  }
-  
-  // Add dynamic NaCCA class-level-appropriate questions
+  // Add dynamic NaCCA class-level-appropriate questions ONLY for chosen topics
   const cl = classLevel || 'Basic 4' as ClassLevel;
   if (subject === 'Mathematics') {
     allQuestions = [...allQuestions, ...generateMathVariations(cl, topics, difficulty)];
   }
   allQuestions = [...allQuestions, ...generateLevelQuestions(subject, cl, topics)];
-  
-  // Filter out any question already used globally (across ALL generations this session)
-  const available = allQuestions.filter(q => !globalUsedQuestions.has(q.q));
-  
-  // If we've exhausted all questions, reset global tracker and use all
-  const pool = available.length >= count ? available : allQuestions;
-  if (available.length < count) {
-    globalUsedQuestions.clear();
+
+  // If still none, create generic topic-focused NaCCA question stubs (never unrelated)
+  if (allQuestions.length === 0) {
+    allQuestions = topics.slice(0, count).map((topic) => ({
+      q: `${subject} (${classLevel || ''}): Choose the correct answer about the topic "${topic}".`,
+      options: ['Statement A', 'Statement B', 'Statement C', 'Statement D'],
+      answer: 'Statement A',
+      type: 'mc',
+    }));
   }
+  
+  // Filter out any question already used for THIS class level
+  const clKey = classLevel || 'unknown';
+  const available = allQuestions.filter(q => !globalUsedQuestions.has(globalKey(clKey, q.q)));
+  
+  // If we've exhausted all questions for this class, allow reuse
+  const pool = available.length >= count ? available : allQuestions;
   
   // Shuffle with Fisher-Yates for true randomness
   const shuffled = shuffle(pool);
@@ -1323,7 +1386,7 @@ function getQuestionsFromBank(subject: string, topics: string[], count: number, 
     if (selected.length >= count) break;
     if (!selected.find(s => s.q === q.q)) {
       selected.push(q);
-      globalUsedQuestions.add(q.q); // Mark as used globally
+      globalUsedQuestions.add(globalKey(clKey, q.q)); // Mark as used for this class
     }
   }
   
@@ -1343,12 +1406,13 @@ function getQuestionsFromBank(subject: string, topics: string[], count: number, 
 function generateSubjectiveQuestions(
   subject: string,
   classLevel: ClassLevel,
-  _topics: string[],
+  topics: string[],
   count: number,
   marksPerQuestion: number,
 ): Question[] {
   const subjectBanks = SUBJECTIVE_BANKS[subject] || {};
   const questions: Question[] = [];
+  const matchedKeys = matchTopicKeys(subjectBanks, topics);
   
   const isB7toB9 = ['Basic 7', 'Basic 8', 'Basic 9'].includes(classLevel);
   const isB6toB9 = ['Basic 6', 'Basic 7', 'Basic 8', 'Basic 9'].includes(classLevel);
@@ -1364,9 +1428,9 @@ function generateSubjectiveQuestions(
   if (needsPracticalQ1) {
     let practicalBank: typeof subjectBanks['practical'];
     if (subject === 'RME') {
-      practicalBank = subjectBanks['story'] || subjectBanks['default'];
+      practicalBank = topicHas(topics, 'story', 'scenario', 'moral', 'religious') ? (subjectBanks['story'] || subjectBanks['default']) : subjectBanks['default'];
     } else {
-      practicalBank = subjectBanks['practical'] || subjectBanks['default'];
+      practicalBank = subjectBanks['practical'] || (matchedKeys.includes('default') ? subjectBanks['default'] : undefined);
     }
     
     if (practicalBank && practicalBank.length > 0) {
@@ -1395,13 +1459,22 @@ function generateSubjectiveQuestions(
     }
   }
   
-  // Generate remaining questions — filter out globally used ones
-  const allBankQuestions = shuffle(Object.values(subjectBanks).flat().filter(q => 
-    !questions.find(eq => eq.question === q.q) && !globalUsedQuestions.has(q.q)
+  // Generate remaining questions ONLY from selected/additional topic-matched banks
+  let topicSpecificBanks = matchedKeys.length > 0
+    ? matchedKeys.flatMap(key => subjectBanks[key] || [])
+    : [];
+
+  // If nothing matched exactly, use default only for broad topic categories; otherwise create generic selected-topic questions below
+  if (topicSpecificBanks.length === 0 && matchedKeys.includes('default')) {
+    topicSpecificBanks = subjectBanks['default'] || [];
+  }
+
+  const allBankQuestions = shuffle(topicSpecificBanks.filter(q =>
+    !questions.find(eq => eq.question === q.q) && !globalUsedQuestions.has(globalKey(classLevel, q.q))
   ));
   
   for (let i = startIdx; i < count; i++) {
-    const bankQ = allBankQuestions[(i - startIdx) % allBankQuestions.length];
+    const bankQ = allBankQuestions.length > 0 ? allBankQuestions[(i - startIdx) % allBankQuestions.length] : undefined;
     if (bankQ) {
       questions.push({
         id: uid(),
@@ -1420,6 +1493,24 @@ function generateSubjectiveQuestions(
           marks: sq.marks,
         })),
       });
+      globalUsedQuestions.add(globalKey(classLevel, bankQ.q));
+    } else {
+      const topic = topics[(i - startIdx) % Math.max(1, topics.length)] || subject;
+      questions.push({
+        id: uid(),
+        questionNumber: i + 1,
+        type: 'Subjective',
+        question: `Q${i + 1}. Answer the following questions on the topic: ${topic}.`,
+        correctAnswer: `Accept relevant NaCCA-aligned answer strictly based on the topic "${topic}" and the class level ${classLevel}.`,
+        marks: marksPerQuestion,
+        isCompulsory: false,
+        isPractical: false,
+        subQuestions: [
+          { id: uid(), label: 'a', question: `Define or explain ${topic}.`, answer: `Accept correct class-level definition or explanation of ${topic}.`, marks: Math.max(2, Math.floor(marksPerQuestion / 3)) },
+          { id: uid(), label: 'b', question: `State two key facts or examples related to ${topic}.`, answer: `Accept any two valid NaCCA-approved facts/examples on ${topic}.`, marks: Math.max(2, Math.floor(marksPerQuestion / 3)) },
+          { id: uid(), label: 'c', question: `State one use, importance, or application of ${topic}.`, answer: `Accept one valid use/importance/application of ${topic}.`, marks: Math.max(2, marksPerQuestion - 2 * Math.max(2, Math.floor(marksPerQuestion / 3))) },
+        ],
+      });
     }
   }
   
@@ -1428,171 +1519,115 @@ function generateSubjectiveQuestions(
 
 function generateEnglishSectionB(
   classLevel: ClassLevel,
-  _topics: string[],
+  topics: string[],
   literatureExcerpt?: { title: string; excerpt: string; questions: { q: string; answer: string }[] },
 ): ExamSection[] {
   const isB7toB9 = ['Basic 7', 'Basic 8', 'Basic 9'].includes(classLevel);
   const sections: ExamSection[] = [];
   
   if (isB7toB9) {
-    // Grammar - 15 marks
-    const grammarBanks = SUBJECTIVE_BANKS['English Language']?.['grammar'] || [];
-    const grammarQ = grammarBanks[0];
-    sections.push({
-      id: uid(),
-      sectionLabel: 'B',
-      title: 'SECTION B: GRAMMAR',
-      instructions: 'Answer ALL questions in this section.',
-      totalMarks: 15,
-      isObjective: false,
-      questions: grammarQ ? [{
-        id: uid(),
-        questionNumber: 1,
-        type: 'Subjective',
-        question: grammarQ.q,
-        correctAnswer: grammarQ.answer,
-        marks: 15,
-        subQuestions: grammarQ.subQs?.map(sq => ({
-          id: uid(),
-          label: sq.label,
-          question: sq.q,
-          answer: sq.answer,
-          marks: sq.marks,
-        })),
-      }] : [],
-    });
-    
-    // Comprehension - 15 marks
-    const compBanks = SUBJECTIVE_BANKS['English Language']?.['comprehension'] || [];
-    const compQ = compBanks[0];
-    sections.push({
-      id: uid(),
-      sectionLabel: 'C',
-      title: 'SECTION C: COMPREHENSION',
-      instructions: 'Read the passage carefully and answer the questions that follow.',
-      totalMarks: 15,
-      isObjective: false,
-      questions: compQ ? [{
-        id: uid(),
-        questionNumber: 1,
-        type: 'Subjective',
-        question: compQ.q,
-        correctAnswer: compQ.answer,
-        marks: 15,
-        subQuestions: compQ.subQs?.map(sq => ({
-          id: uid(),
-          label: sq.label,
-          question: sq.q,
-          answer: sq.answer,
-          marks: sq.marks,
-        })),
-      }] : [],
-    });
-    
-    // Summary - 10 marks
-    const summaryBanks = SUBJECTIVE_BANKS['English Language']?.['summary'] || [];
-    const summaryQ = summaryBanks[0];
-    sections.push({
-      id: uid(),
-      sectionLabel: 'D',
-      title: 'SECTION D: SUMMARY',
-      instructions: 'Read the passage and answer the question.',
-      totalMarks: 10,
-      isObjective: false,
-      questions: summaryQ ? [{
-        id: uid(),
-        questionNumber: 1,
-        type: 'Subjective',
-        question: summaryQ.q,
-        correctAnswer: summaryQ.answer,
-        marks: 10,
-      }] : [],
-    });
-    
-    // Composition - 10 marks
-    const compoBanks = SUBJECTIVE_BANKS['English Language']?.['composition'] || [];
-    const compoQ = compoBanks[0];
-    sections.push({
-      id: uid(),
-      sectionLabel: 'E',
-      title: 'SECTION E: COMPOSITION',
-      instructions: 'Write a composition of about 250 words on ONE of the following topics.',
-      totalMarks: 10,
-      isObjective: false,
-      questions: compoQ ? [{
-        id: uid(),
-        questionNumber: 1,
-        type: 'Subjective',
-        question: compoQ.q,
-        correctAnswer: compoQ.answer,
-        marks: 10,
-        subQuestions: compoQ.subQs?.map(sq => ({
-          id: uid(),
-          label: sq.label,
-          question: sq.q,
-          answer: sq.answer,
-          marks: sq.marks,
-        })),
-      }] : [],
-    });
+    const wantsGrammar = topicHas(topics, 'grammar');
+    const wantsComprehension = topicHas(topics, 'comprehension');
+    const wantsSummary = topicHas(topics, 'summary');
+    const wantsComposition = topicHas(topics, 'composition', 'narrative essay', 'descriptive essay', 'argumentative essay', 'formal letter', 'informal letter');
+    const wantsLiterature = topicHas(topics, 'literature', 'the beacon of light');
 
-    // Literature (The Beacon of Light) - 10 marks
-    const litBanks = SUBJECTIVE_BANKS['English Language']?.['literature'] || [];
-    const litQ = litBanks[0];
-    let litQuestionObj: Question;
-
-    if (literatureExcerpt && literatureExcerpt.excerpt) {
-      litQuestionObj = {
-        id: uid(),
-        questionNumber: 1,
-        type: 'Subjective',
-        question: `Read the excerpt below from "The Beacon of Light" (${literatureExcerpt.title}) and answer the questions that follow:\n\n"${literatureExcerpt.excerpt}"`,
-        correctAnswer: '',
-        marks: 10,
-        subQuestions: literatureExcerpt.questions.map((qItem, idx) => ({
-          id: uid(),
-          label: String.fromCharCode(97 + idx),
-          question: qItem.q,
-          answer: qItem.answer,
-          marks: Math.floor(10 / literatureExcerpt.questions.length) || 3,
-        })),
-      };
-    } else if (litQ) {
-      litQuestionObj = {
-        id: uid(),
-        questionNumber: 1,
-        type: 'Subjective',
-        question: litQ.q,
-        correctAnswer: litQ.answer,
-        marks: 10,
-        subQuestions: litQ.subQs?.map(sq => ({
-          id: uid(),
-          label: sq.label,
-          question: sq.q,
-          answer: sq.answer,
-          marks: sq.marks,
-        })),
-      };
-    } else {
-      litQuestionObj = {
-        id: uid(),
-        questionNumber: 1,
-        type: 'Subjective',
-        question: 'Answer the following literature questions based on "The Beacon of Light".',
-        correctAnswer: '',
-        marks: 10,
-      };
+    if (wantsGrammar) {
+      const grammarBanks = SUBJECTIVE_BANKS['English Language']?.['grammar'] || [];
+      const grammarQ = grammarBanks[0];
+      sections.push({
+        id: uid(), sectionLabel: 'B', title: 'SECTION B: GRAMMAR', instructions: 'Answer ALL questions in this section.', totalMarks: 15, isObjective: false,
+        questions: grammarQ ? [{ id: uid(), questionNumber: 1, type: 'Subjective', question: grammarQ.q, correctAnswer: grammarQ.answer, marks: 15, subQuestions: grammarQ.subQs?.map(sq => ({ id: uid(), label: sq.label, question: sq.q, answer: sq.answer, marks: sq.marks })) }] : [],
+      });
     }
 
-    sections.push({
-      id: uid(),
-      sectionLabel: 'F',
-      title: 'SECTION F: LITERATURE (THE BEACON OF LIGHT)',
-      instructions: 'Answer ALL questions in this section.',
-      totalMarks: 10,
-      isObjective: false,
-      questions: [litQuestionObj],
-    });
+    if (wantsComprehension) {
+      const compBanks = SUBJECTIVE_BANKS['English Language']?.['comprehension'] || [];
+      const compQ = compBanks[0];
+      sections.push({
+        id: uid(), sectionLabel: sections.length === 0 ? 'B' : String.fromCharCode(66 + sections.length), title: `SECTION ${sections.length === 0 ? 'B' : String.fromCharCode(66 + sections.length)}: COMPREHENSION`, instructions: 'Read the passage carefully and answer the questions that follow.', totalMarks: 15, isObjective: false,
+        questions: compQ ? [{ id: uid(), questionNumber: 1, type: 'Subjective', question: compQ.q, correctAnswer: compQ.answer, marks: 15, subQuestions: compQ.subQs?.map(sq => ({ id: uid(), label: sq.label, question: sq.q, answer: sq.answer, marks: sq.marks })) }] : [],
+      });
+    }
+
+    if (wantsSummary) {
+      const summaryBanks = SUBJECTIVE_BANKS['English Language']?.['summary'] || [];
+      const summaryQ = summaryBanks[0];
+      sections.push({
+        id: uid(), sectionLabel: sections.length === 0 ? 'B' : String.fromCharCode(66 + sections.length), title: `SECTION ${sections.length === 0 ? 'B' : String.fromCharCode(66 + sections.length)}: SUMMARY`, instructions: 'Read the passage and answer the question.', totalMarks: 10, isObjective: false,
+        questions: summaryQ ? [{ id: uid(), questionNumber: 1, type: 'Subjective', question: summaryQ.q, correctAnswer: summaryQ.answer, marks: 10 }] : [],
+      });
+    }
+
+    if (wantsComposition) {
+      const compoBanks = SUBJECTIVE_BANKS['English Language']?.['composition'] || [];
+      const compoQ = compoBanks[0];
+      sections.push({
+        id: uid(), sectionLabel: sections.length === 0 ? 'B' : String.fromCharCode(66 + sections.length), title: `SECTION ${sections.length === 0 ? 'B' : String.fromCharCode(66 + sections.length)}: COMPOSITION`, instructions: 'Write a composition of about 250 words on ONE of the following topics.', totalMarks: 10, isObjective: false,
+        questions: compoQ ? [{ id: uid(), questionNumber: 1, type: 'Subjective', question: compoQ.q, correctAnswer: compoQ.answer, marks: 10, subQuestions: compoQ.subQs?.map(sq => ({ id: uid(), label: sq.label, question: sq.q, answer: sq.answer, marks: sq.marks })) }] : [],
+      });
+    }
+
+    if (wantsLiterature) {
+      // Literature (The Beacon of Light) - 10 marks
+      const litBanks = SUBJECTIVE_BANKS['English Language']?.['literature'] || [];
+      const litQ = litBanks[0];
+      let litQuestionObj: Question;
+
+      if (literatureExcerpt && literatureExcerpt.excerpt) {
+        litQuestionObj = {
+          id: uid(),
+          questionNumber: 1,
+          type: 'Subjective',
+          question: `Read the excerpt below from "The Beacon of Light" (${literatureExcerpt.title}) and answer the questions that follow:\n\n"${literatureExcerpt.excerpt}"`,
+          correctAnswer: '',
+          marks: 10,
+          subQuestions: literatureExcerpt.questions.map((qItem, idx) => ({
+            id: uid(),
+            label: String.fromCharCode(97 + idx),
+            question: qItem.q,
+            answer: qItem.answer,
+            marks: Math.floor(10 / literatureExcerpt.questions.length) || 3,
+          })),
+        };
+      } else if (litQ) {
+        litQuestionObj = {
+          id: uid(),
+          questionNumber: 1,
+          type: 'Subjective',
+          question: litQ.q,
+          correctAnswer: litQ.answer,
+          marks: 10,
+          subQuestions: litQ.subQs?.map(sq => ({
+            id: uid(),
+            label: sq.label,
+            question: sq.q,
+            answer: sq.answer,
+            marks: sq.marks,
+          })),
+        };
+      } else {
+        litQuestionObj = {
+          id: uid(),
+          questionNumber: 1,
+          type: 'Subjective',
+          question: 'Answer the following literature questions based on "The Beacon of Light".',
+          correctAnswer: '',
+          marks: 10,
+        };
+      }
+
+      const nextLabel = sections.length === 0 ? 'B' : String.fromCharCode(66 + sections.length);
+      sections.push({
+        id: uid(),
+        sectionLabel: nextLabel,
+        title: `SECTION ${nextLabel}: LITERATURE (THE BEACON OF LIGHT)`,
+        instructions: 'Answer ALL questions in this section.',
+        totalMarks: 10,
+        isObjective: false,
+        questions: [litQuestionObj],
+      });
+    }
   }
   
   return sections;

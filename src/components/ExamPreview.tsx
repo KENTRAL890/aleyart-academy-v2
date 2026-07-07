@@ -481,8 +481,17 @@ export default function ExamPreview({ exam, onUpdate }: Props) {
                         <strong>{q.questionNumber}.</strong> <MathFormattedText text={q.question} />
                       </p>
                       {q.imageUrl && (
-                        <div style={{ margin: '8px 0 8px 20px' }}>
+                        <div style={{ margin: '8px 0 8px 20px', position: 'relative' }}>
                           <img src={q.imageUrl} alt="Diagram" style={{ maxWidth: '100%', width: '260px', maxHeight: '220px', objectFit: 'contain', display: 'block', border: '1px solid #ccc', borderRadius: '4px', background: '#fff' }} />
+                          <button
+                            onClick={() => {
+                              const us = [...exam.sections]; const sec = {...us[sIdx]}; const qs = [...sec.questions]; const qc = {...qs[qIdx]}; qc.imageUrl = undefined; qc.diagramLabels = undefined; qs[qIdx] = qc; sec.questions = qs; us[sIdx] = sec;
+                              const ms = exam.markingScheme.map(m => m.questionId === qc.id ? {...m, imageUrl: undefined, diagramLabels: undefined} : m);
+                              onUpdate({...exam, sections: us, markingScheme: ms, updatedAt: new Date().toISOString()});
+                            }}
+                            className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold no-print"
+                            title="Remove diagram"
+                          >✕</button>
                           {q.diagramLabels && q.diagramLabels.length > 0 && (
                             <div style={{ marginTop: '4px', fontSize: '10pt', color: '#334155' }}>
                               {q.diagramLabels.map((dl, dlIdx) => (
@@ -535,15 +544,24 @@ export default function ExamPreview({ exam, onUpdate }: Props) {
                         </p>
                       )}
                       <p style={{ fontSize: '16pt', fontWeight: 600, margin: '0 0 4px 0', lineHeight: '1.4' }}>
-                        Question {q.questionNumber}. [{q.marks} marks]
+                        Q{q.questionNumber}. [{q.marks} marks]
                       </p>
                       <div style={{ fontSize: '16pt', whiteSpace: 'pre-wrap', margin: '0 0 8px 0', lineHeight: '1.4' }}>
                         <MathFormattedText text={q.question} />
                       </div>
 
                       {q.imageUrl && (
-                        <div style={{ margin: '8px 0' }}>
+                        <div style={{ margin: '8px 0', position: 'relative', display: 'inline-block' }}>
                           <img src={q.imageUrl} alt="Question illustration" style={{ maxWidth: '100%', width: '320px', maxHeight: '260px', objectFit: 'contain', display: 'block', border: '1px solid #ccc', borderRadius: '4px', background: '#fff' }} />
+                          <button
+                            onClick={() => {
+                              const us = [...exam.sections]; const sec = {...us[sIdx]}; const qs = [...sec.questions]; const qc = {...qs[qIdx]}; qc.imageUrl = undefined; qc.diagramLabels = undefined; qs[qIdx] = qc; sec.questions = qs; us[sIdx] = sec;
+                              const ms = exam.markingScheme.map(m => m.questionId === qc.id ? {...m, imageUrl: undefined, diagramLabels: undefined} : m);
+                              onUpdate({...exam, sections: us, markingScheme: ms, updatedAt: new Date().toISOString()});
+                            }}
+                            className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold no-print"
+                            title="Remove diagram"
+                          >✕</button>
                           {q.diagramLabels && q.diagramLabels.length > 0 && (
                             <div style={{ marginTop: '6px', fontSize: '14pt', lineHeight: '1.6' }}>
                               <p style={{ fontWeight: 700, fontSize: '14pt', margin: '0 0 4px 0' }}>Identify the parts labelled below:</p>
@@ -560,7 +578,7 @@ export default function ExamPreview({ exam, onUpdate }: Props) {
                       {q.subQuestions && q.subQuestions.map(sq => (
                         <div key={sq.id} style={{ marginLeft: '20px', marginBottom: '8px' }}>
                           <p style={{ fontSize: '16pt', lineHeight: '1.4' }}>
-                            <strong>({sq.label})</strong> <MathFormattedText text={sq.question} /> <span style={{ fontSize: '12pt', color: '#666' }}>[{sq.marks} marks]</span>
+                            <strong>{sq.label}.</strong> <MathFormattedText text={sq.question} /> <span style={{ fontSize: '12pt', color: '#666' }}>[{sq.marks} marks]</span>
                           </p>
                           {sq.imageUrl && (
                             <div style={{ margin: '4px 0' }}>
