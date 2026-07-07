@@ -140,6 +140,82 @@ export default function ExamGenerator({ user, specialMode }: Props) {
     setSubjectiveSections(updated);
   };
 
+  // Parse uploaded/pasted document text, auto-detect Section A / Section B headings
+  const parseUploadedText = (text: string) => {
+    // Clean text: remove invisible chars, BOM, smart quotes
+    const cleaned = text
+      .replace(/\uFEFF/g, '')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n');
+
+    const lines = cleaned.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    let currentSection: 'A' | 'B' | 'auto' = 'auto';
+    const newObj: typeof customObjectives = [];
+    const newSubj: typeof customSubjectives = [];
+
+    for (const line of lines) {
+      const upper = line.toUpperCase().replace(/[^A-Z0-9 ]/g, '');
+      
+      // Detect section headings — skip the line itself
+      if (upper.includes('SECTION A') || upper === 'OBJECTIVE' || upper === 'OBJECTIVES' || upper === 'MCQ' || upper === 'MULTIPLE CHOICE') {
+        currentSection = 'A';
+        continue;
+      }
+      if (upper.includes('SECTION B') || upper === 'SUBJECTIVE' || upper === 'THEORY' || upper === 'ESSAY' || upper === 'SECTION C' || upper === 'SECTION D') {
+        currentSection = 'B';
+        continue;
+      }
+      // Skip obvious headings and decorative lines
+      if (upper.startsWith('SECTION') || upper.startsWith('PART ') || /^[-=_*]{3,}$/.test(line) || upper.startsWith('INSTRUCTIONS') || line.length < 5) continue;
+
+      // Remove leading question numbers like "1.", "2)", "Q1.", etc.
+      const cleanedLine = line.replace(/^(\d+[\.\)\:]|\s*Q\d+[\.\)\:])\s*/i, '').trim();
+      if (!cleanedLine) continue;
+
+      const hasPipe = cleanedLine.includes('|');
+      const parts = hasPipe ? cleanedLine.split('|').map(p => p.trim()).filter(Boolean) : [cleanedLine];
+
+      if (currentSection === 'A') {
+        if (parts.length >= 6) {
+          // Full MCQ: question | A | B | C | D | correct
+          newObj.push({ question: parts[0], options: parts.slice(1, 5), correctAnswer: parts[5] });
+        } else if (parts.length === 5) {
+          // question | A | B | C | D (correct = first option)
+          newObj.push({ question: parts[0], options: parts.slice(1, 5), correctAnswer: parts[1] });
+        } else {
+          // Plain text question under Section A — add with empty options for teacher to fill
+          newObj.push({ question: parts[0], options: ['A. ___', 'B. ___', 'C. ___', 'D. ___'], correctAnswer: 'A. ___' });
+        }
+      } else if (currentSection === 'B') {
+        if (parts.length >= 2) {
+          newSubj.push({ question: parts[0], answer: parts.slice(1).join(' '), marks: 10 });
+        } else {
+          newSubj.push({ question: parts[0], answer: 'Accept valid NaCCA-aligned answer.', marks: 10 });
+        }
+      } else {
+        // Auto-detect: if has 5+ pipe parts, treat as objective; otherwise subjective
+        if (parts.length >= 5) {
+          newObj.push({ question: parts[0], options: parts.slice(1, 5), correctAnswer: parts[parts.length - 1] || parts[1] });
+        } else if (parts.length >= 2 && hasPipe) {
+          newSubj.push({ question: parts[0], answer: parts.slice(1).join(' '), marks: 10 });
+        } else if (cleanedLine.length > 15) {
+          newSubj.push({ question: cleanedLine, answer: 'Accept valid NaCCA-aligned answer.', marks: 10 });
+        }
+      }
+    }
+
+    if (newObj.length > 0) setCustomObjectives(prev => [...prev, ...newObj]);
+    if (newSubj.length > 0) setCustomSubjectives(prev => [...prev, ...newSubj]);
+
+    if (newObj.length + newSubj.length > 0) {
+      alert(`✅ Loaded ${newObj.length} objective (Section A) + ${newSubj.length} subjective (Section B) = ${newObj.length + newSubj.length} question(s) from document.`);
+    } else {
+      alert('⚠️ No questions detected. Make sure your document has questions separated by new lines, and optionally use headings like "SECTION A" and "SECTION B".');
+    }
+  };
+
   const handleGenerate = () => {
     if (!classLevel || !subject) return;
     const finalExamType = customExamType || examType || 'Class Test';
@@ -455,29 +531,21 @@ export default function ExamGenerator({ user, specialMode }: Props) {
               <h4 className="font-semibold text-orange-800 mb-3 flex items-center gap-2">
                 <span>📄</span> Upload / Paste Questions from Document (Word, Text)
               </h4>
-              <p className="text-xs text-orange-600 mb-3">Paste questions from a Word document or upload a .txt file. Format: one question per line. For MCQ, add options separated by | (pipe). Example:<br/><code className="bg-orange-100 px-1 rounded text-[10px]">What is 2+2? | 3 | 4 | 5 | 6 | 4</code> (last value = correct answer)</p>
+              <p className="text-xs text-orange-600 mb-3">
+                Paste questions from a Word document or upload a .txt file.<br/>
+                Use headings like <b>SECTION A</b> or <b>OBJECTIVE</b> for MCQ questions, and <b>SECTION B</b> or <b>SUBJECTIVE</b> for essay questions.<br/>
+                MCQ format: <code className="bg-orange-100 px-1 rounded text-[10px]">Question? | OptionA | OptionB | OptionC | OptionD | CorrectAnswer</code><br/>
+                Subjective format: <code className="bg-orange-100 px-1 rounded text-[10px]">Question text | Answer text</code> or just <code className="bg-orange-100 px-1 rounded text-[10px]">Question text</code>
+              </p>
               <div className="space-y-2">
                 <textarea
-                  placeholder={"Paste questions here...\nExample objective:\nWhat is the capital of Ghana? | Kumasi | Accra | Tamale | Cape Coast | Accra\n\nExample subjective:\nExplain the importance of education in Ghana."}
-                  rows={4}
+                  placeholder={"SECTION A\nWhat is the capital of Ghana? | Kumasi | Accra | Tamale | Cape Coast | Accra\nWhich planet is closest to the sun? | Venus | Mercury | Earth | Mars | Mercury\n\nSECTION B\nExplain the importance of education in Ghana. | Education helps develop human capital...\nDescribe the water cycle."}
+                  rows={5}
                   className="w-full px-3 py-2 border border-orange-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
                   onBlur={e => {
                     const text = e.target.value.trim();
                     if (!text) return;
-                    const lines = text.split('\n').filter(l => l.trim());
-                    for (const line of lines) {
-                      const parts = line.split('|').map(p => p.trim());
-                      if (parts.length >= 6) {
-                        // MCQ: question | opt1 | opt2 | opt3 | opt4 | correct
-                        const q = parts[0];
-                        const opts = parts.slice(1, 5);
-                        const ans = parts[5] || opts[0];
-                        setCustomObjectives(prev => [...prev, { question: q, options: opts, correctAnswer: ans }]);
-                      } else if (parts.length >= 2) {
-                        // Subjective: question | answer
-                        setCustomSubjectives(prev => [...prev, { question: parts[0], answer: parts[1] || 'Accept valid answer.', marks: 10 }]);
-                      }
-                    }
+                    parseUploadedText(text);
                     e.target.value = '';
                   }}
                 />
@@ -494,25 +562,14 @@ export default function ExamGenerator({ user, specialMode }: Props) {
                         const reader = new FileReader();
                         reader.onload = (ev) => {
                           const text = (ev.target?.result as string || '').trim();
-                          const lines = text.split('\n').filter(l => l.trim());
-                          for (const line of lines) {
-                            const parts = line.split('|').map(p => p.trim());
-                            if (parts.length >= 6) {
-                              const q = parts[0];
-                              const opts = parts.slice(1, 5);
-                              const ans = parts[5] || opts[0];
-                              setCustomObjectives(prev => [...prev, { question: q, options: opts, correctAnswer: ans }]);
-                            } else if (parts.length >= 2) {
-                              setCustomSubjectives(prev => [...prev, { question: parts[0], answer: parts[1] || 'Accept valid answer.', marks: 10 }]);
-                            }
-                          }
+                          if (text) parseUploadedText(text);
                         };
                         reader.readAsText(file);
                         e.target.value = '';
                       }}
                     />
                   </label>
-                  <span className="text-[10px] text-orange-500">{customObjectives.length + customSubjectives.length} custom question(s) loaded</span>
+                  <span className="text-[10px] text-orange-500 font-semibold">{customObjectives.length} objective + {customSubjectives.length} subjective = {customObjectives.length + customSubjectives.length} question(s) loaded</span>
                 </div>
               </div>
             </div>

@@ -262,12 +262,209 @@ function generateMathVariations(classLevel: ClassLevel, topics: string[], diffic
   return v;
 }
 
+// NaCCA/GES curriculum question templates per subject per topic — generates many unique questions
+const NACCA_TEMPLATES: Record<string, Record<string, { q: string; options: string[]; answer: string }[]>> = {
+  'Science': {
+    'Living Things': [
+      { q: 'All living things can ___', options: ['Fly', 'Grow and reproduce', 'Swim', 'Talk'], answer: 'Grow and reproduce' },
+      { q: 'Which of these is a characteristic of living things?', options: ['Movement', 'Hardness', 'Transparency', 'Magnetism'], answer: 'Movement' },
+      { q: 'Non-living things cannot ___', options: ['Be seen', 'Breathe', 'Be touched', 'Be moved'], answer: 'Breathe' },
+      { q: 'A cat is a living thing because it can ___', options: ['Be painted', 'Grow and reproduce', 'Float', 'Dissolve'], answer: 'Grow and reproduce' },
+    ],
+    'Plants': [
+      { q: 'The green pigment in leaves is called ___', options: ['Haemoglobin', 'Chlorophyll', 'Melanin', 'Keratin'], answer: 'Chlorophyll' },
+      { q: 'Which part of the plant makes food?', options: ['Root', 'Stem', 'Leaf', 'Flower'], answer: 'Leaf' },
+      { q: 'Seeds are found inside the ___', options: ['Root', 'Stem', 'Leaf', 'Fruit'], answer: 'Fruit' },
+      { q: 'Plants take in ___ from the air for photosynthesis.', options: ['Oxygen', 'Nitrogen', 'Carbon dioxide', 'Hydrogen'], answer: 'Carbon dioxide' },
+    ],
+    'Animals': [
+      { q: 'Animals that eat both plants and animals are called ___', options: ['Herbivores', 'Carnivores', 'Omnivores', 'Decomposers'], answer: 'Omnivores' },
+      { q: 'Which of these animals is a reptile?', options: ['Frog', 'Lizard', 'Parrot', 'Bat'], answer: 'Lizard' },
+      { q: 'Fish breathe using ___', options: ['Lungs', 'Skin', 'Gills', 'Nose'], answer: 'Gills' },
+      { q: 'A mammal feeds its young ones with ___', options: ['Water', 'Milk', 'Juice', 'Blood'], answer: 'Milk' },
+    ],
+    'Water': [
+      { q: 'Pure water is ___ in colour.', options: ['White', 'Blue', 'Colourless', 'Green'], answer: 'Colourless' },
+      { q: 'Water freezes at ___ degrees Celsius.', options: ['100', '50', '0', '-10'], answer: '0' },
+      { q: 'The three forms of water are solid, liquid and ___', options: ['Plasma', 'Gas', 'Vapour', 'Ice'], answer: 'Gas' },
+    ],
+    'Energy': [
+      { q: 'The main source of energy on Earth is the ___', options: ['Moon', 'Stars', 'Sun', 'Wind'], answer: 'Sun' },
+      { q: 'A battery converts ___ energy to electrical energy.', options: ['Light', 'Chemical', 'Sound', 'Heat'], answer: 'Chemical' },
+      { q: 'Sound energy travels through ___', options: ['Vacuum only', 'Water only', 'Air, water and solids', 'Space only'], answer: 'Air, water and solids' },
+    ],
+    'Matter': [
+      { q: 'Everything that has mass and occupies space is called ___', options: ['Energy', 'Matter', 'Force', 'Light'], answer: 'Matter' },
+      { q: 'Ice is an example of a ___', options: ['Liquid', 'Gas', 'Solid', 'Plasma'], answer: 'Solid' },
+      { q: 'Boiling changes a liquid to a ___', options: ['Solid', 'Gas', 'Liquid', 'Plasma'], answer: 'Gas' },
+    ],
+    'Diversity of Matter': [
+      { q: 'A pure substance made of only one type of atom is called ___', options: ['Compound', 'Mixture', 'Element', 'Solution'], answer: 'Element' },
+      { q: 'Salt dissolved in water is an example of a ___', options: ['Compound', 'Element', 'Solution', 'Suspension'], answer: 'Solution' },
+      { q: 'The smallest particle of an element is called ___', options: ['Molecule', 'Cell', 'Atom', 'Ion'], answer: 'Atom' },
+      { q: 'Filtration is used to separate ___ from ___', options: ['Salt from water', 'Insoluble solid from liquid', 'Oil from water', 'Gas from liquid'], answer: 'Insoluble solid from liquid' },
+    ],
+    'Cycles': [
+      { q: 'The water cycle is driven by energy from the ___', options: ['Moon', 'Wind', 'Sun', 'Earth'], answer: 'Sun' },
+      { q: 'When water vapour cools and changes to liquid, it is called ___', options: ['Evaporation', 'Condensation', 'Precipitation', 'Sublimation'], answer: 'Condensation' },
+    ],
+    'Electricity and Magnetism': [
+      { q: 'The unit of electrical resistance is ___', options: ['Volt', 'Ampere', 'Ohm', 'Watt'], answer: 'Ohm' },
+      { q: 'A magnet attracts objects made of ___', options: ['Wood', 'Plastic', 'Iron', 'Glass'], answer: 'Iron' },
+      { q: 'Like poles of a magnet ___ each other.', options: ['Attract', 'Repel', 'Ignore', 'Pull'], answer: 'Repel' },
+    ],
+    'Health': [
+      { q: 'Mosquitoes spread ___', options: ['Cholera', 'Malaria', 'Measles', 'Flu'], answer: 'Malaria' },
+      { q: 'We should wash our hands with ___ and water.', options: ['Oil', 'Soap', 'Sand', 'Juice'], answer: 'Soap' },
+    ],
+  },
+  'Social Studies': {
+    'Family': [
+      { q: 'An extended family includes grandparents, uncles, aunts and ___', options: ['Friends', 'Neighbours', 'Cousins', 'Strangers'], answer: 'Cousins' },
+      { q: 'The father is the ___ of the nuclear family.', options: ['Friend', 'Head', 'Neighbour', 'Teacher'], answer: 'Head' },
+    ],
+    'Community': [
+      { q: 'A community leader helps to maintain ___ and order.', options: ['Chaos', 'Peace', 'Noise', 'Conflict'], answer: 'Peace' },
+      { q: 'Markets, schools and hospitals are found in a ___', options: ['Forest', 'Community', 'Desert', 'Ocean'], answer: 'Community' },
+    ],
+    'Government': [
+      { q: 'Ghana is governed by a ___ system.', options: ['Monarchy', 'Democratic', 'Military', 'Dictatorial'], answer: 'Democratic' },
+      { q: 'The head of a district assembly is the ___', options: ['Chief', 'District Chief Executive', 'President', 'King'], answer: 'District Chief Executive' },
+    ],
+    'Our Environment': [
+      { q: 'Cutting down trees carelessly is called ___', options: ['Afforestation', 'Deforestation', 'Reforestation', 'Plantation'], answer: 'Deforestation' },
+      { q: 'Burning waste pollutes the ___', options: ['Water', 'Air', 'Soil only', 'Moon'], answer: 'Air' },
+    ],
+    'National Development': [
+      { q: 'Paying taxes helps the government to ___', options: ['Buy personal items', 'Build roads and schools', 'Travel abroad', 'Print money'], answer: 'Build roads and schools' },
+    ],
+    'Human Rights': [
+      { q: 'The right to education means every child can go to ___', options: ['Market', 'School', 'Farm', 'Church'], answer: 'School' },
+      { q: 'Children have the right to be protected from ___', options: ['Education', 'Abuse', 'Food', 'Play'], answer: 'Abuse' },
+    ],
+  },
+  'Computing': {
+    'Computer Hardware': [
+      { q: 'The CPU stands for ___', options: ['Central Processing Unit', 'Computer Personal Unit', 'Central Power Unit', 'Central Program Unit'], answer: 'Central Processing Unit' },
+      { q: 'A printer is an example of an ___ device.', options: ['Input', 'Output', 'Storage', 'Processing'], answer: 'Output' },
+      { q: 'The mouse is an ___ device.', options: ['Output', 'Storage', 'Input', 'Processing'], answer: 'Input' },
+      { q: 'ROM stands for ___', options: ['Random Output Memory', 'Read Only Memory', 'Run On Memory', 'Real Output Memory'], answer: 'Read Only Memory' },
+    ],
+    'Programming': [
+      { q: 'Python is an example of a ___ language.', options: ['Hardware', 'Programming', 'Musical', 'Foreign'], answer: 'Programming' },
+      { q: 'An error in a computer program is called a ___', options: ['Feature', 'Bug', 'Update', 'Patch'], answer: 'Bug' },
+      { q: 'The process of finding and fixing errors in a program is called ___', options: ['Coding', 'Debugging', 'Designing', 'Testing'], answer: 'Debugging' },
+    ],
+    'Networking': [
+      { q: 'WAN stands for ___', options: ['Wide Area Network', 'Wired Access Network', 'Web Area Network', 'Wide Application Network'], answer: 'Wide Area Network' },
+      { q: 'The Internet uses ___ to connect computers globally.', options: ['Ropes', 'Wires and wireless signals', 'Pipes', 'Roads'], answer: 'Wires and wireless signals' },
+    ],
+    'Database': [
+      { q: 'A database stores organized ___', options: ['Music', 'Data', 'Pictures only', 'Videos only'], answer: 'Data' },
+      { q: 'A record in a database is a ___', options: ['Column', 'Row of related data', 'Table name', 'File type'], answer: 'Row of related data' },
+    ],
+  },
+  'RME': {
+    'Moral Values': [
+      { q: 'A truthful person is described as ___', options: ['Lazy', 'Honest', 'Greedy', 'Selfish'], answer: 'Honest' },
+      { q: 'Helping others without expecting anything in return shows ___', options: ['Selfishness', 'Kindness', 'Hatred', 'Pride'], answer: 'Kindness' },
+      { q: 'Stealing is considered ___ behaviour.', options: ['Good', 'Normal', 'Bad', 'Acceptable'], answer: 'Bad' },
+    ],
+    'Religious Teachings': [
+      { q: 'The Christian place of worship is called a ___', options: ['Mosque', 'Temple', 'Church', 'Shrine'], answer: 'Church' },
+      { q: 'Muslims worship in a ___', options: ['Church', 'Mosque', 'Temple', 'Shrine'], answer: 'Mosque' },
+      { q: 'The month of fasting in Islam is called ___', options: ['Eid', 'Hajj', 'Ramadan', 'Salat'], answer: 'Ramadan' },
+    ],
+    'Peace Building': [
+      { q: 'Conflicts should be resolved through ___', options: ['Fighting', 'War', 'Dialogue', 'Insults'], answer: 'Dialogue' },
+      { q: 'A mediator helps to bring ___ between two parties.', options: ['War', 'Confusion', 'Peace', 'Hatred'], answer: 'Peace' },
+    ],
+  },
+  'Creative Arts': {
+    'Drawing': [
+      { q: 'The tool used for sketching is a ___', options: ['Brush', 'Pencil', 'Eraser', 'Ruler'], answer: 'Pencil' },
+      { q: 'Shading in drawing helps to show ___ and depth.', options: ['Colour', 'Light and shadow', 'Movement', 'Sound'], answer: 'Light and shadow' },
+    ],
+    'Textiles': [
+      { q: 'Cotton is an example of a ___ fibre.', options: ['Synthetic', 'Natural', 'Metallic', 'Chemical'], answer: 'Natural' },
+      { q: 'Nylon is an example of a ___ fibre.', options: ['Natural', 'Synthetic', 'Animal', 'Plant'], answer: 'Synthetic' },
+      { q: 'Batik is a method of ___', options: ['Weaving', 'Dyeing fabric', 'Carving wood', 'Moulding clay'], answer: 'Dyeing fabric' },
+    ],
+    'Visual Art': [
+      { q: 'Sculpture involves creating three-dimensional ___', options: ['Sounds', 'Artworks', 'Songs', 'Stories'], answer: 'Artworks' },
+    ],
+  },
+  'Career Technology': {
+    'Design and Technology': [
+      { q: 'A prototype is a ___ of a product.', options: ['Final version', 'First model/sample', 'Drawing', 'Photograph'], answer: 'First model/sample' },
+      { q: 'The design process starts with identifying a ___', options: ['Solution', 'Material', 'Problem/Need', 'Tool'], answer: 'Problem/Need' },
+    ],
+    'Entrepreneurship': [
+      { q: 'Capital is the ___ needed to start a business.', options: ['Land', 'Money', 'Tools', 'Workers'], answer: 'Money' },
+      { q: 'A profit is made when selling price is ___ than cost price.', options: ['Less', 'Equal', 'Greater', 'Same'], answer: 'Greater' },
+    ],
+    'Home Management': [
+      { q: 'A balanced diet contains all the ___ classes of food.', options: ['Two', 'Three', 'Six', 'Ten'], answer: 'Six' },
+      { q: 'Budgeting helps a family to ___ their money wisely.', options: ['Waste', 'Manage', 'Hide', 'Borrow'], answer: 'Manage' },
+    ],
+  },
+  'English Language': {
+    'Nouns': [
+      { q: 'A ___ names a person, place, animal or thing.', options: ['Verb', 'Noun', 'Adjective', 'Adverb'], answer: 'Noun' },
+      { q: '"Accra" is an example of a ___ noun.', options: ['Common', 'Proper', 'Abstract', 'Collective'], answer: 'Proper' },
+      { q: 'A group of birds is called a ___', options: ['Herd', 'Flock', 'Pack', 'Swarm'], answer: 'Flock' },
+    ],
+    'Tenses': [
+      { q: '"I will go to school tomorrow" is in the ___ tense.', options: ['Past', 'Present', 'Future', 'Perfect'], answer: 'Future' },
+      { q: 'The past tense of "eat" is ___', options: ['Eated', 'Ate', 'Eaten', 'Eating'], answer: 'Ate' },
+      { q: '"She is running" is in the present ___ tense.', options: ['Simple', 'Continuous', 'Perfect', 'Past'], answer: 'Continuous' },
+    ],
+    'Vocabulary': [
+      { q: 'The synonym of "big" is ___', options: ['Small', 'Large', 'Thin', 'Short'], answer: 'Large' },
+      { q: 'The antonym of "early" is ___', options: ['Quick', 'Fast', 'Late', 'Soon'], answer: 'Late' },
+    ],
+  },
+  'History': {
+    'Independence': [
+      { q: 'The Big Six of Ghana fought for ___', options: ['Trade', 'Independence', 'War', 'Religion'], answer: 'Independence' },
+      { q: 'Ghana was formerly called ___', options: ['Ivory Coast', 'Gold Coast', 'Silver Coast', 'Slave Coast'], answer: 'Gold Coast' },
+    ],
+    'Colonialism': [
+      { q: 'The Bond of 1844 was signed between the British and the ___', options: ['Ashanti', 'Fante chiefs', 'Ewe', 'Ga'], answer: 'Fante chiefs' },
+    ],
+  },
+  'French': {
+    'Greetings': [
+      { q: '"Comment allez-vous?" means ___', options: ['Good morning', 'How are you?', 'Goodbye', 'Thank you'], answer: 'How are you?' },
+      { q: '"Merci beaucoup" means ___', options: ['Good evening', 'Please', 'Thank you very much', 'Sorry'], answer: 'Thank you very much' },
+    ],
+    'Numbers': [
+      { q: '"Sept" in English is ___', options: ['Six', 'Seven', 'Eight', 'Nine'], answer: 'Seven' },
+      { q: '"Douze" means ___', options: ['Ten', 'Eleven', 'Twelve', 'Thirteen'], answer: 'Twelve' },
+    ],
+  },
+};
+
 // Generate NaCCA-aligned dynamic questions for non-math subjects based on class level
 function generateLevelQuestions(subject: string, classLevel: ClassLevel, topics: string[]): QItem[] {
   const v: QItem[] = [];
   const isLower = isLevel(classLevel, LOWER_PRIMARY);
   const isUpper = isLevel(classLevel, UPPER_PRIMARY);
   const isJhs = isLevel(classLevel, JHS);
+
+  // Pull from the expanded NACCA_TEMPLATES bank for ALL subjects
+  const subjectTemplates = NACCA_TEMPLATES[subject] || {};
+  for (const topic of topics) {
+    const nt = normalizeTopic(topic);
+    for (const [key, questions] of Object.entries(subjectTemplates)) {
+      const nk = normalizeTopic(key);
+      if (nk.includes(nt) || nt.includes(nk)) {
+        for (const q of questions) {
+          v.push({ ...q, type: 'mc' });
+        }
+      }
+    }
+  }
 
   if (subject === 'Science') {
     if (isLower) {
@@ -1386,11 +1583,53 @@ function getQuestionsFromBank(subject: string, topics: string[], count: number, 
     if (selected.length >= count) break;
     if (!selected.find(s => s.q === q.q)) {
       selected.push(q);
-      globalUsedQuestions.add(globalKey(clKey, q.q)); // Mark as used for this class
+      globalUsedQuestions.add(globalKey(clKey, q.q));
     }
   }
   
-  return selected.map((item, idx) => ({
+  // GUARANTEE: fill remaining slots so we ALWAYS reach exactly `count`
+  const r2 = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+  let fillIdx = 0;
+  while (selected.length < count) {
+    fillIdx++;
+    const topicIdx = fillIdx % Math.max(1, topics.length);
+    const topic = topics[topicIdx] || subject;
+    
+    if (subject === 'Mathematics') {
+      // Generate unique arithmetic with varied operations
+      const ops = ['+', '-', '×'];
+      const op = ops[r2(0, 2)];
+      let a: number, b: number, ans: number;
+      if (op === '+') { a = r2(3, 99); b = r2(3, 99); ans = a + b; }
+      else if (op === '-') { a = r2(20, 99); b = r2(2, a - 1); ans = a - b; }
+      else { a = r2(2, 12); b = r2(2, 12); ans = a * b; }
+      const qText = `${a} ${op} ${b} = ___`;
+      if (!selected.find(s => s.q === qText)) {
+        const w1 = ans + r2(1, 8); const w2 = Math.abs(ans - r2(1, 8)); const w3 = ans + r2(9, 15);
+        selected.push({ q: qText, options: shuffle([String(ans), String(w1), String(w2), String(w3)]), answer: String(ans), type: 'mc' });
+      }
+    } else {
+      // Pull from NACCA_TEMPLATES for this subject — cycle through all available
+      const subjectTemplates = NACCA_TEMPLATES[subject] || {};
+      const allTemplateQs = Object.values(subjectTemplates).flat();
+      if (allTemplateQs.length > 0) {
+        const tq = allTemplateQs[(fillIdx - 1) % allTemplateQs.length];
+        const qText = tq.q + ` [${classLevel}]`;
+        if (!selected.find(s => s.q === qText)) {
+          selected.push({ q: qText, options: [...tq.options], answer: tq.answer, type: 'mc' });
+        }
+      } else {
+        // Last resort: generate unique numbered question
+        const qText = `Question ${selected.length + 1}. Which statement about "${topic}" (${classLevel}) is TRUE?`;
+        if (!selected.find(s => s.q === qText)) {
+          selected.push({ q: qText, options: ['Statement A is correct', 'Statement B is correct', 'Statement C is correct', 'Statement D is correct'], answer: 'Statement A is correct', type: 'mc' });
+        }
+      }
+    }
+    if (fillIdx > count * 3) break; // safety with higher limit
+  }
+  
+  return selected.slice(0, count).map((item, idx) => ({
     id: uid(),
     questionNumber: idx + 1,
     type: 'Multiple Choice' as const,
